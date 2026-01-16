@@ -206,7 +206,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(width: 8),
-                    Text('•', style: Theme.of(context).textTheme.bodyLarge),
+                    Text(
+                      '•',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
