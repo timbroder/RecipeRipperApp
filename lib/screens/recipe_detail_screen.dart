@@ -120,8 +120,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     child: Icon(
                       Icons.restaurant,
                       size: 64,
-                      color:
-                          Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.3),
                     ),
                   ),
                 );
@@ -306,8 +308,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             'Processing Info',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(
+                    0.7,
+                  ),
                 ),
           ),
           const SizedBox(height: 8),
@@ -334,8 +337,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(
+                    0.6,
+                  ),
                 ),
           ),
           Text(

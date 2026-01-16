@@ -92,7 +92,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.storage, color: Theme.of(context).colorScheme.primary),
+                leading: Icon(
+                  Icons.storage,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 title: const Text('Storage Usage'),
                 subtitle: const Text('Calculating...'),
                 onTap: () {
