@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart' show PackageInfo;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,24 +8,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _appVersion = '0.1.0';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAppInfo();
-  }
-
-  Future<void> _loadAppInfo() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      setState(() {
-        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
-      });
-    } catch (e) {
-      // Keep default version if package_info_plus is not available
-    }
-  }
+  static const String _appVersion = '0.1.0+1';
 
   @override
   Widget build(BuildContext context) {
