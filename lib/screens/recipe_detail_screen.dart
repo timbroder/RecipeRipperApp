@@ -199,7 +199,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
             )
           else
-            ...(_recipe.ingredients.map((ingredient) {
+            ..._recipe.ingredients.map((ingredient) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6.0),
                 child: Row(
@@ -220,7 +220,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ],
                 ),
               );
-            })),
+            }),
         ],
       ),
     );
@@ -259,7 +259,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
             )
           else
-            ...(_recipe.directions.map((direction) {
+            ..._recipe.directions.map((direction) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
@@ -291,7 +291,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ],
                 ),
               );
-            })),
+            }),
         ],
       ),
     );
