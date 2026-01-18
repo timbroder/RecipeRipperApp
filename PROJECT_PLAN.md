@@ -54,26 +54,34 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 
 ## Sprint Breakdown
 
-### Sprint 0: Project Setup & Foundation
-**Duration**: 1 week  
+### Sprint 0: Project Setup & Foundation ✅ COMPLETE
+**Duration**: 1 week
 **Goal**: Set up development environment and project structure
 
 #### Tasks
-- [ ] Install Flutter SDK and configure development environment
-- [ ] Create Flutter project with proper package structure
-- [ ] Set up iOS and Android native projects
-- [ ] Configure CI/CD pipeline (GitHub Actions)
-- [ ] Set up linting and formatting rules
-- [ ] Create data models (Recipe, Ingredient, ProcessingJob)
-- [ ] Set up local database schema (SQLite)
-- [ ] Create basic app navigation structure (home, detail, settings)
-- [ ] Design app icon and splash screen
+- [x] Install Flutter SDK and configure development environment
+- [x] Create Flutter project with proper package structure
+- [x] Set up iOS and Android native projects (scaffolded, builds commented out in CI until fully configured)
+- [x] Configure CI/CD pipeline (GitHub Actions)
+- [x] Set up linting and formatting rules
+- [x] Create data models (Recipe, Ingredient, Direction, ProcessingJob)
+- [x] Set up local database schema (SQLite)
+- [x] Create basic app navigation structure (home, detail, edit, settings)
+- [ ] Design app icon and splash screen (deferred - using placeholder)
 
 #### Deliverables
-- Runnable Flutter app skeleton
-- Database schema defined
-- CI/CD pipeline working
-- Project documentation (README, CONTRIBUTING)
+- ✅ Runnable Flutter app skeleton
+- ✅ Database schema defined (SQLite with full CRUD)
+- ✅ CI/CD pipeline working (analyze, lint, test jobs)
+- ✅ Project documentation (README, CONTRIBUTING, CLAUDE.md)
+
+#### What Was Built
+- **Data Models**: `Recipe`, `Ingredient`, `Direction`, `ProcessingJob` with full serialization
+- **Database**: SQLite schema with recipes, ingredients, directions tables
+- **Screens**: HomeScreen (recipe grid), RecipeDetailScreen, RecipeEditScreen, SettingsScreen
+- **Services**: DatabaseService with full CRUD operations
+- **Tests**: Unit tests for all data models
+- **CI/CD**: GitHub Actions workflow with format checking, linting, and tests
 
 #### Dependencies
 - None
@@ -682,6 +690,6 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2026-01-16  
-**Status**: Planning Phase
+**Version**: 1.1
+**Last Updated**: 2026-01-18
+**Status**: Sprint 0 Complete - Ready for Sprint 1

@@ -242,6 +242,12 @@ flutter devices
 
 See PROJECT_PLAN.md for detailed sprint breakdown (Sprints 0-6, ~14-15 weeks to MVP)
 
+**IMPORTANT**: When a sprint or phase is completed, you MUST update PROJECT_PLAN.md to reflect:
+- Mark completed tasks with `[x]`
+- Add a "What Was Built" section summarizing deliverables
+- Update the status and version at the bottom of the file
+- Note any deferred items or changes from the original plan
+
 ## CI/CD Notes
 
 ### When CI Fails
