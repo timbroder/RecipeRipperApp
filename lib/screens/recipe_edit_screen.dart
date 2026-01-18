@@ -180,8 +180,11 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             child: Text(
               'No ingredients yet. Tap + to add one.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
             ),
           )
         else
@@ -278,8 +281,11 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             child: Text(
               'No directions yet. Tap + to add one.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
             ),
           )
         else

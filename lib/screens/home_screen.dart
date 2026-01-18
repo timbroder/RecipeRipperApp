@@ -54,8 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _recipes.isEmpty
-          ? _buildEmptyState()
-          : _buildRecipeGrid(),
+              ? _buildEmptyState()
+              : _buildRecipeGrid(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // TODO: Implement add recipe functionality
@@ -92,8 +92,11 @@ class _HomeScreenState extends State<HomeScreen> {
               'Tap the + button to add your first recipe from a cooking video',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
             ),
           ],
         ),
@@ -172,8 +175,8 @@ class _RecipeCard extends StatelessWidget {
                   Text(
                     recipe.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -182,10 +185,10 @@ class _RecipeCard extends StatelessWidget {
                     Text(
                       recipe.sourcePlatform!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

@@ -131,8 +131,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               Text(
                 _recipe.title,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               if (_recipe.sourcePlatform != null ||
                   _recipe.sourceUrl != null) ...[
@@ -185,8 +185,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             Text(
               'No ingredients found',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
             )
           else
             ..._recipe.ingredients.map((ingredient) {
@@ -239,8 +242,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             Text(
               'No directions found',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
             )
           else
             ..._recipe.directions.map((direction) {
@@ -257,10 +263,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       child: Text(
                         '${direction.stepNumber}',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onPrimaryContainer,
-                        ),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -295,9 +301,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Text(
             'Processing Info',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
+                  fontWeight: FontWeight.bold,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
           ),
           const SizedBox(height: 8),
           if (metadata.processingTimeSeconds != null)
@@ -323,8 +330,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
           ),
           Text(
             value,
