@@ -1,0 +1,57 @@
+name: recipe_ripper
+description: A Flutter app that extracts structured recipes from cooking videos using on-device ML
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI Components
+  cupertino_icons: ^1.0.2
+
+  # Database (Sprint 0)
+  sqflite: ^2.3.0
+  path_provider: ^2.1.1
+  path: ^1.8.3
+
+  # State Management (Sprint 0)
+  provider: ^6.1.1
+
+  # Storage (Sprint 0)
+  shared_preferences: ^2.2.2
+
+  # Utilities (Sprint 0)
+  intl: ^0.18.1
+  uuid: ^4.2.1
+
+  # Video handling (Sprint 1+)
+  # video_player: ^2.8.1
+  # image_picker: ^1.0.4
+  # file_picker: ^6.1.1
+
+  # HTTP & File downloading (Sprint 1+)
+  # http: ^1.1.0
+  # dio: ^5.4.0
+
+  # Video processing (Sprint 2+)
+  # ffmpeg_kit_flutter: ^6.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  test: ^1.24.9
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
+
+  # Assets will be added as needed
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/

@@ -1,0 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'screens/home_screen.dart';
+import 'services/database_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize database
+  final databaseService = DatabaseService();
+  await databaseService.initialize();
+
+  runApp(
+    MultiProvider(
+      providers: [Provider<DatabaseService>.value(value: databaseService)],
+      child: const RecipeRipperApp(),
+    ),
+  );
+}
+
+class RecipeRipperApp extends StatelessWidget {
+  const RecipeRipperApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Recipe Ripper',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepOrange,
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepOrange,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+      ),
+      themeMode: ThemeMode.system,
+      home: const HomeScreen(),
+    );
+  }
+}

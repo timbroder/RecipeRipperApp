@@ -242,6 +242,38 @@ flutter devices
 
 See PROJECT_PLAN.md for detailed sprint breakdown (Sprints 0-6, ~14-15 weeks to MVP)
 
+## CI/CD Notes
+
+### When CI Fails
+**IMPORTANT**: When tests or CI checks are failing, ALWAYS connect to the GitHub PR to get the actual error message. Use:
+```bash
+gh pr view <PR_NUMBER> --json statusCheckRollup
+gh run view <RUN_ID> --log-failed
+```
+Do NOT guess at what might be wrong. Get the actual error first.
+
+### Dart Formatting
+- CI runs `dart format --output=none --set-exit-if-changed .`
+- Different Dart/Flutter versions may format code differently
+- The CI workflow uses `channel: 'stable'` without pinning a specific version
+- Always run `dart format lib/ test/` locally before committing
+- If format check fails in CI but passes locally, ensure you're using the same Flutter version
+
+### Flutter Analyze
+- CI runs `flutter analyze` which fails on ANY issue (including info-level)
+- The `analysis_options.yaml` is kept minimal to avoid conflicts:
+  - Extends `package:flutter_lints/flutter.yaml`
+  - Ignores `deprecated_member_use` (Flutter API deprecations are common)
+  - Disables `prefer_const_constructors` (causes false positives)
+- Always run `flutter analyze` locally before pushing
+- If analyze fails, check analysis_options.yaml isn't too strict
+
+### Lessons Learned (Sprint 0)
+1. Don't create overly strict analysis_options.yaml - it causes more problems than it solves
+2. Dart formatter behavior varies between versions - don't pin old Flutter versions in CI
+3. Run both `dart format` AND `flutter analyze` locally before pushing
+4. When troubleshooting CI, always get the actual logs first
+
 ## Contributing
 
 When working on this project:
@@ -251,6 +283,7 @@ When working on this project:
 4. Update this document if architecture changes
 5. Test on both iOS and Android before committing
 6. Keep native code minimal (prefer Dart when possible)
+7. Run `dart format .` and `flutter analyze` before committing
 
 ## Questions?
 
@@ -260,5 +293,5 @@ Check the original Python implementation for parsing logic reference:
 
 ---
 
-**Last Updated**: 2026-01-16
-**Current Phase**: Planning (Pre-Sprint 0)
+**Last Updated**: 2026-01-18
+**Current Phase**: Sprint 0 Complete - Ready for Sprint 1
