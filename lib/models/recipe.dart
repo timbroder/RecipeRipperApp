@@ -24,8 +24,8 @@ class Recipe {
     this.ingredients = const [],
     this.directions = const [],
     this.metadata,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   Recipe copyWith({
     String? id,
@@ -101,11 +101,13 @@ class Recipe {
       thumbnailPath: json['thumbnailPath'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
-      ingredients: (json['ingredients'] as List<dynamic>?)
+      ingredients:
+          (json['ingredients'] as List<dynamic>?)
               ?.map((i) => Ingredient.fromJson(i as Map<String, dynamic>))
               .toList() ??
           [],
-      directions: (json['directions'] as List<dynamic>?)
+      directions:
+          (json['directions'] as List<dynamic>?)
               ?.map((d) => Direction.fromJson(d as Map<String, dynamic>))
               .toList() ??
           [],

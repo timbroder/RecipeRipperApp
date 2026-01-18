@@ -20,12 +20,8 @@ void main() {
         title: 'Test Recipe',
         sourceUrl: 'https://example.com/video',
         sourcePlatform: 'YouTube',
-        ingredients: [
-          Ingredient(item: 'flour', quantity: 2, unit: 'cups'),
-        ],
-        directions: [
-          Direction(stepNumber: 1, text: 'Mix ingredients'),
-        ],
+        ingredients: [Ingredient(item: 'flour', quantity: 2, unit: 'cups')],
+        directions: [Direction(stepNumber: 1, text: 'Mix ingredients')],
       );
 
       final json = recipe.toJson();
@@ -45,18 +41,10 @@ void main() {
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
         'ingredients': [
-          {
-            'item': 'flour',
-            'quantity': 2.0,
-            'unit': 'cups',
-            'order': 0,
-          },
+          {'item': 'flour', 'quantity': 2.0, 'unit': 'cups', 'order': 0},
         ],
         'directions': [
-          {
-            'stepNumber': 1,
-            'text': 'Mix ingredients',
-          },
+          {'stepNumber': 1, 'text': 'Mix ingredients'},
         ],
       };
 

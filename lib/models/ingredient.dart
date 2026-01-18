@@ -133,14 +133,6 @@ class Ingredient {
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      recipeId,
-      quantity,
-      unit,
-      item,
-      notes,
-      order,
-    );
+    return Object.hash(id, recipeId, quantity, unit, item, notes, order);
   }
 }

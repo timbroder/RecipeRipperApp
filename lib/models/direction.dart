@@ -81,11 +81,6 @@ class Direction {
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      recipeId,
-      stepNumber,
-      text,
-    );
+    return Object.hash(id, recipeId, stepNumber, text);
   }
 }

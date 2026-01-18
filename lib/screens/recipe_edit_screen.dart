@@ -8,10 +8,7 @@ import '../services/database_service.dart';
 class RecipeEditScreen extends StatefulWidget {
   final Recipe recipe;
 
-  const RecipeEditScreen({
-    super.key,
-    required this.recipe,
-  });
+  const RecipeEditScreen({super.key, required this.recipe});
 
   @override
   State<RecipeEditScreen> createState() => _RecipeEditScreenState();
@@ -93,9 +90,9 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
     await databaseService.updateRecipe(updatedRecipe);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recipe saved')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Recipe saved')));
       Navigator.pop(context, updatedRecipe);
     }
   }
@@ -160,19 +157,16 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
           children: [
             Text(
               'Ingredients',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
                 setState(() {
                   _ingredients.add(
-                    Ingredient(
-                      item: '',
-                      order: _ingredients.length,
-                    ),
+                    Ingredient(item: '', order: _ingredients.length),
                   );
                   _markChanged();
                 });
@@ -186,11 +180,8 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             child: Text(
               'No ingredients yet. Tap + to add one.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.6),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           )
         else
@@ -264,19 +255,16 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
           children: [
             Text(
               'Directions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
                 setState(() {
                   _directions.add(
-                    Direction(
-                      stepNumber: _directions.length + 1,
-                      text: '',
-                    ),
+                    Direction(stepNumber: _directions.length + 1, text: ''),
                   );
                   _markChanged();
                 });
@@ -290,11 +278,8 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
             child: Text(
               'No directions yet. Tap + to add one.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.6),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           )
         else
@@ -335,10 +320,7 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
           children: [
             const Icon(Icons.drag_handle),
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              child: Text('${index + 1}'),
-            ),
+            CircleAvatar(radius: 16, child: Text('${index + 1}')),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(

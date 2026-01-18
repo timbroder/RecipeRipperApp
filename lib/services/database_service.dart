@@ -202,10 +202,7 @@ class DatabaseService {
   Future<List<Recipe>> getAllRecipes() async {
     final db = await database;
 
-    final recipeMaps = await db.query(
-      tableRecipes,
-      orderBy: 'created_at DESC',
-    );
+    final recipeMaps = await db.query(tableRecipes, orderBy: 'created_at DESC');
 
     final recipes = <Recipe>[];
     for (final map in recipeMaps) {
@@ -269,11 +266,7 @@ class DatabaseService {
 
   Future<void> deleteRecipe(String id) async {
     final db = await database;
-    await db.delete(
-      tableRecipes,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(tableRecipes, where: 'id = ?', whereArgs: [id]);
   }
 
   // Ingredient operations
@@ -429,11 +422,7 @@ class DatabaseService {
 
   Future<void> deleteProcessingJob(String id) async {
     final db = await database;
-    await db.delete(
-      tableProcessingJobs,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete(tableProcessingJobs, where: 'id = ?', whereArgs: [id]);
   }
 
   // Utility methods

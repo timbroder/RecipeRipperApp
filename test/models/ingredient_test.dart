@@ -30,21 +30,13 @@ void main() {
     });
 
     test('toDisplayString() formats correctly with quantity and unit', () {
-      final ingredient = Ingredient(
-        item: 'flour',
-        quantity: 2,
-        unit: 'cups',
-      );
+      final ingredient = Ingredient(item: 'flour', quantity: 2, unit: 'cups');
 
       expect(ingredient.toDisplayString(), equals('2 cups flour'));
     });
 
     test('toDisplayString() formats correctly with fractional quantity', () {
-      final ingredient = Ingredient(
-        item: 'sugar',
-        quantity: 0.5,
-        unit: 'cup',
-      );
+      final ingredient = Ingredient(item: 'sugar', quantity: 0.5, unit: 'cup');
 
       expect(ingredient.toDisplayString(), equals('0.5 cup sugar'));
     });
@@ -61,10 +53,7 @@ void main() {
     });
 
     test('toDisplayString() formats correctly without quantity', () {
-      final ingredient = Ingredient(
-        item: 'salt',
-        unit: 'pinch',
-      );
+      final ingredient = Ingredient(item: 'salt', unit: 'pinch');
 
       expect(ingredient.toDisplayString(), equals('pinch salt'));
     });
@@ -95,11 +84,7 @@ void main() {
     });
 
     test('copyWith() updates only specified fields', () {
-      final original = Ingredient(
-        item: 'flour',
-        quantity: 2,
-        unit: 'cups',
-      );
+      final original = Ingredient(item: 'flour', quantity: 2, unit: 'cups');
 
       final updated = original.copyWith(quantity: 3);
 

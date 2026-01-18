@@ -12,9 +12,7 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        Provider<DatabaseService>.value(value: databaseService),
-      ],
+      providers: [Provider<DatabaseService>.value(value: databaseService)],
       child: const RecipeRipperApp(),
     ),
   );
@@ -34,10 +32,7 @@ class RecipeRipperApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -45,10 +40,7 @@ class RecipeRipperApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       ),
       themeMode: ThemeMode.system,
       home: const HomeScreen(),
