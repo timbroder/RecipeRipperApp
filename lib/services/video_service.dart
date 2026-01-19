@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
@@ -181,12 +182,13 @@ class VideoService {
       // Get manifest and select best quality
       final manifest =
           await _youtubeExplode.videos.streamsClient.getManifest(video.id);
-      final streamInfo = manifest.muxed.withHighestBitrate();
 
-      if (streamInfo == null) {
+      if (manifest.muxed.isEmpty) {
         throw VideoException('No suitable video stream found',
             code: 'NO_STREAM');
       }
+
+      final streamInfo = manifest.muxed.withHighestBitrate();
 
       onProgress?.call(0.3, 'Downloading video...');
 
@@ -342,7 +344,7 @@ class VideoService {
       return thumbnail;
     } catch (e) {
       // Thumbnail generation is non-critical, so we just log and continue
-      print('Warning: Failed to generate thumbnail: $e');
+      debugPrint('Warning: Failed to generate thumbnail: $e');
       return null;
     }
   }
@@ -458,7 +460,7 @@ class VideoService {
         }
       }
     } catch (e) {
-      print('Warning: Failed to cleanup old videos: $e');
+      debugPrint('Warning: Failed to cleanup old videos: $e');
     }
   }
 

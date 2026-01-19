@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Callback for when a URL is received
@@ -39,7 +40,7 @@ class ShareHandlerService {
       final url = await _channel.invokeMethod<String>('getSharedUrl');
       return url;
     } on PlatformException catch (e) {
-      print('Failed to get shared URL: ${e.message}');
+      debugPrint('Failed to get shared URL: ${e.message}');
       return null;
     }
   }

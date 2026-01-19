@@ -7,9 +7,9 @@ class VideoPreviewScreen extends StatefulWidget {
   final VideoSource videoSource;
 
   const VideoPreviewScreen({
-    Key? key,
+    super.key,
     required this.videoSource,
-  }) : super(key: key);
+  });
 
   @override
   State<VideoPreviewScreen> createState() => _VideoPreviewScreenState();
@@ -19,7 +19,6 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   final VideoService _videoService = VideoService();
 
   VideoMetadata? _metadata;
-  String? _localVideoPath;
   bool _isLoading = true;
   bool _isProcessing = false;
   double _downloadProgress = 0.0;
@@ -78,7 +77,6 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
       );
 
       setState(() {
-        _localVideoPath = videoPath;
         _metadata = metadata;
         _isLoading = false;
       });
@@ -337,10 +335,10 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                 const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: _cancel,
-                  child: const Text('Cancel'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
+                  child: const Text('Cancel'),
                 ),
               ],
             ),
