@@ -21,7 +21,8 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
 
   VideoMetadata? _metadata;
   bool _isLoading = true;
-  bool _isProcessing = false;
+  // ignore: unused_field
+  final bool _isProcessing = false;
   double _downloadProgress = 0.0;
   String _statusMessage = 'Loading...';
   String? _errorMessage;
@@ -99,7 +100,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => ProcessingScreen(
-            videoPath: _metadata!.videoPath,
+            videoPath: _metadata!.localPath,
             sourceUrl: _metadata!.sourceUrl,
             videoTitle: _metadata!.title,
           ),

@@ -193,8 +193,10 @@ class NotificationService {
   void _onNotificationTapped(NotificationResponse response) {
     // Handle notification tap
     // In a real app, you would navigate to the appropriate screen
-    // For now, we'll just print the payload
-    print('Notification tapped: ${response.payload}');
+    // For now, this is a no-op. Navigation will be added when deep linking
+    // is implemented in a future sprint.
+    // ignore: unused_local_variable
+    final payload = response.payload;
   }
 
   /// Show notification for processing job status

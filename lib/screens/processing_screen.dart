@@ -25,15 +25,16 @@ class ProcessingScreen extends StatefulWidget {
 class _ProcessingScreenState extends State<ProcessingScreen> {
   late ProcessingService _processingService;
   late NotificationService _notificationService;
+  late DatabaseService _databaseService;
   String? _jobId;
   ProcessingJob? _currentJob;
-  bool _processing = false;
 
   @override
   void initState() {
     super.initState();
+    _databaseService = DatabaseService();
     _processingService = ProcessingService(
-      databaseService: DatabaseService(),
+      databaseService: _databaseService,
     );
     _notificationService = NotificationService();
     _notificationService.initialize();
@@ -41,10 +42,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   }
 
   Future<void> _startProcessing() async {
-    setState(() {
-      _processing = true;
-    });
-
     try {
       // Request permissions if needed
       await _notificationService.requestPermission();
@@ -75,12 +72,15 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         // Get the completed job to find the recipe ID
         final completedJob = await _processingService.getJob(_jobId!);
         if (completedJob?.recipeId != null) {
-          // Navigate to recipe detail screen
-          if (mounted) {
+          // Fetch the recipe from database
+          final recipe =
+              await _databaseService.getRecipe(completedJob!.recipeId!);
+          if (recipe != null && mounted) {
+            // Navigate to recipe detail screen
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (context) => RecipeDetailScreen(
-                  recipeId: completedJob!.recipeId!,
+                  recipe: recipe,
                 ),
               ),
             );
@@ -96,12 +96,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           ),
         );
         Navigator.of(context).pop();
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _processing = false;
-        });
       }
     }
   }

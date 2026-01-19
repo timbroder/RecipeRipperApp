@@ -61,10 +61,7 @@ class AudioExtractionService {
       throw Exception('Video file not found: $videoPath');
     }
 
-    // Use ffprobe to get duration
-    final command =
-        '-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$videoPath"';
-
+    // Use ffmpeg -i to get duration from video metadata
     final session = await FFmpegKit.execute('-i "$videoPath" 2>&1');
     final output = await session.getOutput();
 

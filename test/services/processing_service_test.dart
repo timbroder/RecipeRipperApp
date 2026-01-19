@@ -1,34 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_ripper/models/processing_job.dart';
 import 'package:recipe_ripper/models/recipe.dart';
-import 'package:recipe_ripper/services/processing_service.dart';
-import 'package:recipe_ripper/services/database_service.dart';
 
 void main() {
-  group('ProcessingService', () {
-    late ProcessingService processingService;
-    late DatabaseService databaseService;
-
-    setUp(() {
-      databaseService = DatabaseService();
-      processingService = ProcessingService(
-        databaseService: databaseService,
-      );
-    });
-
-    test('should detect YouTube platform from URL', () {
-      expect(
-        processingService.getClass().toString().contains('ProcessingService'),
-        isTrue,
-      );
-    });
-
-    test('should create processing job with valid ID', () {
-      final jobId = 'test-job-id';
-      expect(jobId.isNotEmpty, isTrue);
-    });
-  });
-
   group('ProcessingJob Model', () {
     test('should create processing job with default status', () {
       final job = ProcessingJob(
@@ -100,6 +74,25 @@ void main() {
       expect(failedJob.isFinished, isTrue);
       expect(cancelledJob.isFinished, isTrue);
     });
+
+    test('should copy processing job with new values', () {
+      final originalJob = ProcessingJob(
+        id: 'test-id',
+        status: ProcessingStatus.queued,
+        progress: 0.0,
+      );
+
+      final updatedJob = originalJob.copyWith(
+        status: ProcessingStatus.transcribing,
+        progress: 0.5,
+        currentStep: 'Transcribing...',
+      );
+
+      expect(updatedJob.id, originalJob.id);
+      expect(updatedJob.status, ProcessingStatus.transcribing);
+      expect(updatedJob.progress, 0.5);
+      expect(updatedJob.currentStep, 'Transcribing...');
+    });
   });
 
   group('RecipeMetadata', () {
@@ -135,6 +128,15 @@ void main() {
           deserialized.processingTimeSeconds, metadata.processingTimeSeconds);
       expect(deserialized.videoDuration, metadata.videoDuration);
       expect(deserialized.frameCount, metadata.frameCount);
+    });
+
+    test('should handle null values in metadata', () {
+      final metadata = RecipeMetadata();
+
+      expect(metadata.transcript, isNull);
+      expect(metadata.ocrText, isNull);
+      expect(metadata.processingTimeSeconds, isNull);
+      expect(metadata.frameCount, isNull);
     });
   });
 }
