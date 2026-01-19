@@ -280,6 +280,37 @@ Do NOT guess at what might be wrong. Get the actual error first.
 3. Run both `dart format` AND `flutter analyze` locally before pushing
 4. When troubleshooting CI, always get the actual logs first
 
+### Lessons Learned (Sprint 1)
+1. **Dart syntax rules**: `typedef` declarations cannot be inside classes - must be at top level
+2. **Widget constructors**: Always put `child` argument last in widget constructors
+3. **Use `super.key`**: In constructors, prefer `super.key` over `Key? key` parameter syntax
+4. **No `print()` in production**: Use `debugPrint()` instead of `print()` for debug output
+5. **Check for unused code**: Remove unused fields and variables before committing
+6. **Null safety**: Don't do unnecessary null checks - check if collections are empty first
+
+### Lessons Learned (Sprint 2)
+1. **Verify existing APIs before using**: Always READ existing model/class files to check actual property names (e.g., `localPath` vs `videoPath`)
+2. **Match constructor signatures**: When navigating to a screen, verify its constructor parameters first (e.g., `RecipeDetailScreen` expects `recipe`, not `recipeId`)
+3. **Remove unused state variables**: If a variable like `_processing` is set but never read, remove it
+4. **Test code must compile**: Don't write test code calling methods that don't exist (e.g., `getClass()` is Java, not Dart)
+5. **Clean imports**: Remove unused imports (e.g., `dart:io` if not used)
+6. **No print in services**: In service classes, either use proper logging or remove debug output entirely
+
+### Pre-Commit Checklist
+Before committing ANY code changes, run these commands:
+```bash
+# 1. Format all Dart code
+dart format lib/ test/
+
+# 2. Run static analysis (must pass with 0 issues)
+flutter analyze
+
+# 3. Run tests
+flutter test
+```
+
+**CRITICAL**: Do NOT commit if `flutter analyze` shows ANY errors. Warnings and info-level issues will also fail CI.
+
 ## Contributing
 
 When working on this project:
