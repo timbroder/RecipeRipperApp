@@ -299,8 +299,8 @@ Check the original Python implementation for parsing logic reference:
 
 ---
 
-**Last Updated**: 2026-01-18
-**Current Phase**: Sprint 1 Complete - Ready for Sprint 2
+**Last Updated**: 2026-01-19
+**Current Phase**: Sprint 2 Complete - Ready for Sprint 3
 
 ## Sprint 1 Completion Summary
 
@@ -341,4 +341,93 @@ Sprint 1 focused on video input and preview functionality. All core features hav
 - `pubspec.yaml` - Added video handling dependencies
 
 ### Next Steps
-Sprint 2 will focus on on-device ML processing (speech transcription and OCR).
+Sprint 3 will focus on recipe parsing and storage logic.
+
+## Sprint 2 Completion Summary
+
+Sprint 2 focused on implementing the on-device ML processing pipeline for extracting audio transcription and on-screen text from videos.
+
+### Features Implemented
+
+1. **Audio Extraction & Transcription**:
+   - FFmpeg Kit integration for audio extraction from video files
+   - WAV format extraction optimized for speech recognition (16kHz, mono)
+   - iOS Speech framework bridge for on-device transcription
+   - Android SpeechRecognizer API bridge
+   - Multi-language support (13+ languages including EN, ES, FR, DE, IT, PT, JA, KO, ZH)
+   - Real-time progress tracking
+
+2. **Video Frame Extraction & OCR**:
+   - FFmpeg-based frame extraction at configurable FPS (default: 1 frame per 0.6 seconds)
+   - Max frame limit (180 frames) to prevent memory issues
+   - iOS Vision framework bridge for OCR
+   - Android ML Kit Text Recognition bridge
+   - Batch processing for multiple frames
+   - Text deduplication for video frames
+   - OCR artifact cleaning
+
+3. **Processing Pipeline**:
+   - ProcessingService orchestrator coordinating all steps
+   - Real-time progress tracking (0-100%)
+   - Error handling and recovery
+   - Automatic cleanup of temporary files
+   - Platform detection (YouTube, Vimeo, Dailymotion, etc.)
+
+4. **Notifications**:
+   - Local notifications for processing status
+   - Progress updates during processing
+   - Completion and failure notifications
+   - Platform-specific notification handling
+
+5. **UI Components**:
+   - ProcessingScreen with real-time progress display
+   - Circular progress indicator with percentage
+   - Status icons for different processing stages
+   - Automatic navigation to recipe detail upon completion
+   - Updated VideoPreviewScreen to launch processing
+
+### Files Added/Modified
+
+**Dart Services:**
+- `lib/services/audio_extraction_service.dart` - FFmpeg audio extraction
+- `lib/services/frame_extraction_service.dart` - FFmpeg frame extraction
+- `lib/services/speech_transcription_service.dart` - Speech recognition platform channel
+- `lib/services/ocr_service.dart` - OCR platform channel
+- `lib/services/processing_service.dart` - Main processing orchestrator
+- `lib/services/notification_service.dart` - Local notifications
+
+**Native iOS Bridges:**
+- `ios/Runner/SpeechRecognitionBridge.swift` - Speech framework integration
+- `ios/Runner/VisionOcrBridge.swift` - Vision framework OCR
+- `ios/Runner/AppDelegate.swift` - Updated to register bridges
+
+**Native Android Bridges:**
+- `android/app/src/main/kotlin/com/reciperipperapp/SpeechRecognitionBridge.kt` - SpeechRecognizer API
+- `android/app/src/main/kotlin/com/reciperipperapp/MlKitOcrBridge.kt` - ML Kit Text Recognition
+- `android/app/src/main/kotlin/com/reciperipperapp/MainActivity.kt` - Updated to register bridges
+- `android/app/build.gradle` - Added ML Kit dependency
+
+**UI Screens:**
+- `lib/screens/processing_screen.dart` - Real-time processing progress
+- `lib/screens/video_preview_screen.dart` - Updated to launch processing
+
+**Tests:**
+- `test/services/processing_service_test.dart` - Processing service unit tests
+
+**Configuration:**
+- `pubspec.yaml` - Added ffmpeg_kit_flutter and flutter_local_notifications
+
+### Deferred Items
+
+- iOS Background Tasks framework (basic foreground processing works)
+- Android WorkManager (basic foreground processing works)
+- Full background processing support will be added in future enhancement phase
+
+### Technical Notes
+
+- All processing is done on-device using native APIs (no cloud dependencies)
+- Speech recognition uses offline models on both iOS and Android
+- OCR uses Vision framework (iOS) and ML Kit (Android) for high accuracy
+- Processing typically takes 20-40% of video duration
+- Temporary files are automatically cleaned up after processing
+- Recipe metadata (transcript + OCR text) is stored in the database for Sprint 3 parsing

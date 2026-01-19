@@ -59,6 +59,6 @@ flutter {
 }
 
 dependencies {
-    // ML Kit dependencies (to be used in Sprint 2)
-    // implementation 'com.google.mlkit:text-recognition:16.0.0'
+    // ML Kit dependencies (Sprint 2)
+    implementation 'com.google.mlkit:text-recognition:16.0.0'
 }

@@ -37,8 +37,11 @@ dependencies:
   dio: ^5.4.0
   youtube_explode_dart: ^2.0.2
 
-  # Video processing (Sprint 2+)
-  # ffmpeg_kit_flutter: ^6.0.3
+  # Video processing (Sprint 2)
+  ffmpeg_kit_flutter: ^6.0.3
+
+  # Notifications (Sprint 2)
+  flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
   flutter_test:

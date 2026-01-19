@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:recipe_ripper/services/video_service.dart';
+import 'processing_screen.dart';
 
 /// Screen for previewing video metadata before processing
 class VideoPreviewScreen extends StatefulWidget {
@@ -89,34 +90,21 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     }
   }
 
-  /// Processes the video (to be implemented in Sprint 2)
+  /// Processes the video
   Future<void> _processVideo() async {
     if (_metadata == null) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
-
-    // TODO: Implement actual processing in Sprint 2
-    // For now, just show a message
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Processing will be implemented in Sprint 2'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    setState(() {
-      _isProcessing = false;
-    });
-
-    // Navigate back to home
+    // Navigate to processing screen
     if (mounted) {
-      Navigator.of(context).pop(true);
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => ProcessingScreen(
+            videoPath: _metadata!.videoPath,
+            sourceUrl: _metadata!.sourceUrl,
+            videoTitle: _metadata!.title,
+          ),
+        ),
+      );
     }
   }
 
