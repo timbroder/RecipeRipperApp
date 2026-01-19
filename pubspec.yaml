@@ -28,14 +28,14 @@ dependencies:
   intl: ^0.18.1
   uuid: ^4.2.1
 
-  # Video handling (Sprint 1+)
-  # video_player: ^2.8.1
-  # image_picker: ^1.0.4
-  # file_picker: ^6.1.1
+  # Video handling (Sprint 1)
+  video_player: ^2.8.1
+  file_picker: ^6.1.1
+  video_thumbnail: ^0.5.3
 
-  # HTTP & File downloading (Sprint 1+)
-  # http: ^1.1.0
-  # dio: ^5.4.0
+  # HTTP & File downloading (Sprint 1)
+  dio: ^5.4.0
+  youtube_explode_dart: ^2.0.2
 
   # Video processing (Sprint 2+)
   # ffmpeg_kit_flutter: ^6.0.3
