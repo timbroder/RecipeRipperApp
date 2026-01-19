@@ -21,7 +21,8 @@ class TranscriptionResult {
 
 /// Service for transcribing audio using platform-specific speech recognition
 class SpeechTranscriptionService {
-  static const _channel = MethodChannel('com.reciperipperapp/speech_recognition');
+  static const _channel =
+      MethodChannel('com.reciperipperapp/speech_recognition');
 
   /// Request permission for speech recognition
   Future<bool> requestPermission() async {

@@ -131,7 +131,8 @@ void main() {
 
       expect(deserialized.transcript, metadata.transcript);
       expect(deserialized.ocrText, metadata.ocrText);
-      expect(deserialized.processingTimeSeconds, metadata.processingTimeSeconds);
+      expect(
+          deserialized.processingTimeSeconds, metadata.processingTimeSeconds);
       expect(deserialized.videoDuration, metadata.videoDuration);
       expect(deserialized.frameCount, metadata.frameCount);
     });
