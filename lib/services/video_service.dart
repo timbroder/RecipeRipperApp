@@ -15,7 +15,8 @@ class VideoException implements Exception {
   VideoException(this.message, {this.code});
 
   @override
-  String toString() => 'VideoException: $message${code != null ? ' ($code)' : ''}';
+  String toString() =>
+      'VideoException: $message${code != null ? ' ($code)' : ''}';
 }
 
 /// Represents a video source (URL or local file)
@@ -139,7 +140,8 @@ class VideoService {
 
       return null;
     } catch (e) {
-      throw VideoException('Failed to pick video file: $e', code: 'PICK_FAILED');
+      throw VideoException('Failed to pick video file: $e',
+          code: 'PICK_FAILED');
     }
   }
 
@@ -177,11 +179,13 @@ class VideoService {
       onProgress?.call(0.2, 'Preparing download...');
 
       // Get manifest and select best quality
-      final manifest = await _youtubeExplode.videos.streamsClient.getManifest(video.id);
+      final manifest =
+          await _youtubeExplode.videos.streamsClient.getManifest(video.id);
       final streamInfo = manifest.muxed.withHighestBitrate();
 
       if (streamInfo == null) {
-        throw VideoException('No suitable video stream found', code: 'NO_STREAM');
+        throw VideoException('No suitable video stream found',
+            code: 'NO_STREAM');
       }
 
       onProgress?.call(0.3, 'Downloading video...');
@@ -208,7 +212,8 @@ class VideoService {
         output.add(chunk);
         received += chunk.length;
         final progress = 0.3 + (received / total * 0.6); // 30-90% for download
-        onProgress?.call(progress, 'Downloading: ${(received / 1024 / 1024).toStringAsFixed(1)} MB');
+        onProgress?.call(progress,
+            'Downloading: ${(received / 1024 / 1024).toStringAsFixed(1)} MB');
       }
 
       await output.close();
@@ -218,7 +223,8 @@ class VideoService {
       return filePath;
     } catch (e) {
       if (e is VideoException) rethrow;
-      throw VideoException('Failed to download YouTube video: $e', code: 'YOUTUBE_DOWNLOAD_FAILED');
+      throw VideoException('Failed to download YouTube video: $e',
+          code: 'YOUTUBE_DOWNLOAD_FAILED');
     } finally {
       _youtubeExplode.close();
     }
@@ -249,7 +255,8 @@ class VideoService {
         filePath,
         onReceiveProgress: (received, total) {
           if (total > 0) {
-            final progress = 0.1 + (received / total * 0.8); // 10-90% for download
+            final progress =
+                0.1 + (received / total * 0.8); // 10-90% for download
             onProgress?.call(
               progress,
               'Downloading: ${(received / 1024 / 1024).toStringAsFixed(1)} MB',
@@ -262,7 +269,8 @@ class VideoService {
 
       return filePath;
     } catch (e) {
-      throw VideoException('Failed to download video: $e', code: 'DOWNLOAD_FAILED');
+      throw VideoException('Failed to download video: $e',
+          code: 'DOWNLOAD_FAILED');
     }
   }
 
@@ -309,7 +317,8 @@ class VideoService {
       );
     } catch (e) {
       if (e is VideoException) rethrow;
-      throw VideoException('Failed to extract video metadata: $e', code: 'METADATA_EXTRACTION_FAILED');
+      throw VideoException('Failed to extract video metadata: $e',
+          code: 'METADATA_EXTRACTION_FAILED');
     }
   }
 
@@ -356,7 +365,8 @@ class VideoService {
 
       return destPath;
     } catch (e) {
-      throw VideoException('Failed to copy video to app storage: $e', code: 'COPY_FAILED');
+      throw VideoException('Failed to copy video to app storage: $e',
+          code: 'COPY_FAILED');
     }
   }
 

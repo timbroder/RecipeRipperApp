@@ -1,11 +1,12 @@
 import 'package:flutter/services.dart';
 
+/// Callback for when a URL is received
+typedef UrlReceivedCallback = void Function(String url);
+
 /// Service to handle incoming shared URLs from iOS/Android
 class ShareHandlerService {
-  static const MethodChannel _channel = MethodChannel('com.reciperipper/shared_url');
-
-  /// Callback for when a URL is received
-  typedef UrlReceivedCallback = void Function(String url);
+  static const MethodChannel _channel =
+      MethodChannel('com.reciperipper/shared_url');
 
   UrlReceivedCallback? _onUrlReceived;
 

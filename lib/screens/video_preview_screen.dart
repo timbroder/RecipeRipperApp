@@ -85,7 +85,8 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = e is VideoException ? e.message : 'Failed to load video: $e';
+        _errorMessage =
+            e is VideoException ? e.message : 'Failed to load video: $e';
       });
     }
   }

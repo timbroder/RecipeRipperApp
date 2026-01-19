@@ -154,7 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e is VideoException ? e.message : 'Failed to pick video: $e'),
+          content: Text(
+              e is VideoException ? e.message : 'Failed to pick video: $e'),
           backgroundColor: Colors.red,
         ),
       );

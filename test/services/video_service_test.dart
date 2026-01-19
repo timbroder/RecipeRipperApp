@@ -16,11 +16,15 @@ void main() {
     group('URL Validation', () {
       test('should validate correct HTTP URLs', () {
         expect(videoService.isValidUrl('http://example.com/video.mp4'), isTrue);
-        expect(videoService.isValidUrl('https://example.com/video.mp4'), isTrue);
+        expect(
+            videoService.isValidUrl('https://example.com/video.mp4'), isTrue);
       });
 
       test('should validate YouTube URLs', () {
-        expect(videoService.isValidUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), isTrue);
+        expect(
+            videoService
+                .isValidUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+            isTrue);
         expect(videoService.isValidUrl('https://youtu.be/dQw4w9WgXcQ'), isTrue);
       });
 
@@ -39,7 +43,8 @@ void main() {
     group('URL Type Detection', () {
       test('should detect YouTube URLs', () {
         expect(
-          videoService.detectUrlType('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+          videoService
+              .detectUrlType('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
           equals('youtube'),
         );
         expect(
@@ -47,7 +52,8 @@ void main() {
           equals('youtube'),
         );
         expect(
-          videoService.detectUrlType('https://m.youtube.com/watch?v=dQw4w9WgXcQ'),
+          videoService
+              .detectUrlType('https://m.youtube.com/watch?v=dQw4w9WgXcQ'),
           equals('youtube'),
         );
       });
@@ -61,7 +67,8 @@ void main() {
 
       test('should detect Dailymotion URLs', () {
         expect(
-          videoService.detectUrlType('https://www.dailymotion.com/video/x123456'),
+          videoService
+              .detectUrlType('https://www.dailymotion.com/video/x123456'),
           equals('dailymotion'),
         );
       });
@@ -152,7 +159,8 @@ void main() {
         final metadata = VideoMetadata.fromJson(json);
 
         expect(metadata.title, equals('Test Video'));
-        expect(metadata.duration, equals(const Duration(minutes: 5, seconds: 30)));
+        expect(
+            metadata.duration, equals(const Duration(minutes: 5, seconds: 30)));
         expect(metadata.thumbnailPath, equals('/path/to/thumbnail.jpg'));
         expect(metadata.sourceUrl, equals('https://example.com/video.mp4'));
         expect(metadata.localPath, equals('/path/to/video.mp4'));
