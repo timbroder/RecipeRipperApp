@@ -64,5 +64,18 @@
 	<!-- Minimum iOS version -->
 	<key>MinimumOSVersion</key>
 	<string>14.0</string>
+
+	<!-- URL schemes for handling shared URLs -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>reciperipper</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.reciperipper.url</string>
+		</dict>
+	</array>
 </dict>
 </plist>

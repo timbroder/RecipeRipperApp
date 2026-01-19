@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
+import '../services/video_service.dart';
+import '../services/share_handler_service.dart';
 import '../models/recipe.dart';
 import 'recipe_detail_screen.dart';
 import 'settings_screen.dart';
+import 'video_preview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,11 +18,41 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Recipe> _recipes = [];
   bool _isLoading = true;
+  final VideoService _videoService = VideoService();
+  final ShareHandlerService _shareHandlerService = ShareHandlerService();
 
   @override
   void initState() {
     super.initState();
     _loadRecipes();
+    _initializeShareHandler();
+  }
+
+  @override
+  void dispose() {
+    _videoService.dispose();
+    _shareHandlerService.dispose();
+    super.dispose();
+  }
+
+  /// Initializes the share handler to receive shared URLs
+  void _initializeShareHandler() {
+    // Set up callback for incoming shared URLs
+    _shareHandlerService.initialize(
+      onUrlReceived: (url) {
+        // Handle the shared URL
+        if (mounted) {
+          _openVideoPreview(VideoSource.url(url));
+        }
+      },
+    );
+
+    // Check if there was a shared URL when the app was launched
+    _shareHandlerService.getInitialSharedUrl().then((url) {
+      if (url != null && mounted) {
+        _openVideoPreview(VideoSource.url(url));
+      }
+    });
   }
 
   Future<void> _loadRecipes() async {
@@ -32,6 +65,115 @@ class _HomeScreenState extends State<HomeScreen> {
       _recipes = recipes;
       _isLoading = false;
     });
+  }
+
+  /// Shows options to add a new recipe (URL or local file)
+  void _showAddRecipeOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: const Text('Enter Video URL'),
+                subtitle: const Text('YouTube or direct video link'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showUrlInputDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.video_library),
+                title: const Text('Choose Local Video'),
+                subtitle: const Text('Pick from your device'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickLocalVideo();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Shows dialog to input video URL
+  void _showUrlInputDialog() {
+    final urlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Enter Video URL'),
+          content: TextField(
+            controller: urlController,
+            decoration: const InputDecoration(
+              hintText: 'https://youtube.com/watch?v=...',
+              prefixIcon: Icon(Icons.link),
+            ),
+            keyboardType: TextInputType.url,
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final url = urlController.text.trim();
+                Navigator.pop(context);
+                if (url.isNotEmpty) {
+                  _openVideoPreview(VideoSource.url(url));
+                }
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Picks a local video file
+  Future<void> _pickLocalVideo() async {
+    try {
+      final filePath = await _videoService.pickVideoFile();
+
+      if (filePath != null && mounted) {
+        _openVideoPreview(VideoSource.file(filePath));
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is VideoException ? e.message : 'Failed to pick video: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Opens the video preview screen
+  Future<void> _openVideoPreview(VideoSource videoSource) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoPreviewScreen(videoSource: videoSource),
+      ),
+    );
+
+    // Reload recipes if processing was successful
+    if (result == true && mounted) {
+      _loadRecipes();
+    }
   }
 
   @override
@@ -57,14 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? _buildEmptyState()
               : _buildRecipeGrid(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement add recipe functionality
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Add recipe functionality coming in Sprint 1!'),
-            ),
-          );
-        },
+        onPressed: _showAddRecipeOptions,
         child: const Icon(Icons.add),
       ),
     );
