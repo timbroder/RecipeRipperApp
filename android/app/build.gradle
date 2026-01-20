@@ -29,6 +29,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -59,6 +60,8 @@ flutter {
 }
 
 dependencies {
+    // Core library desugaring for Java 8+ APIs
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     // ML Kit dependencies (Sprint 2)
     implementation 'com.google.mlkit:text-recognition:16.0.0'
 }
