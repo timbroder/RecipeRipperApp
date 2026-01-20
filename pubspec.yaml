@@ -30,7 +30,7 @@ dependencies:
 
   # Video handling (Sprint 1)
   video_player: ^2.8.1
-  file_picker: ^6.1.1
+  file_picker: ^10.0.0
   video_thumbnail: ^0.5.3
 
   # HTTP & File downloading (Sprint 1)
