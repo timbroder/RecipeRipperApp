@@ -209,7 +209,7 @@ flutter analyze
 - OCR accuracy depends on video quality and text clarity
 - Transcription accuracy depends on audio quality and accents
 - Background processing may be killed by OS under extreme memory pressure
-- **FFmpeg Kit CDN Issue (January 2026)**: The `ffmpeg_kit_flutter` package and its variants have broken CDN distribution - the iOS CocoaPods and Android Maven artifacts return 404 errors. CI builds are marked as `continue-on-error` until an alternative is found. Local builds may work if artifacts are cached.
+- **FFmpeg Kit Retired (January 2026)**: The original `ffmpeg_kit_flutter` package was retired and CDN binaries removed. We migrated to `ffmpeg_kit_flutter_new`, a community-maintained fork with working binaries.
 
 ## Troubleshooting
 

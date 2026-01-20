@@ -1,7 +1,7 @@
 import UIKit
 import Flutter
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
   private let SHARED_URL_CHANNEL = "com.reciperipper/shared_url"
   private var sharedUrl: String?

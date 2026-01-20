@@ -79,7 +79,7 @@ class VisionOcrBridge: NSObject {
             let text = recognizedStrings.joined(separator: "\n")
             let averageConfidence = observations.isEmpty ? 0.0 :
                 observations.reduce(0.0) { sum, obs in
-                    sum + (obs.topCandidates(1).first?.confidence ?? 0.0)
+                    sum + Double(obs.topCandidates(1).first?.confidence ?? 0.0)
                 } / Double(observations.count)
 
             result([
@@ -89,7 +89,7 @@ class VisionOcrBridge: NSObject {
         }
 
         // Configure request for best accuracy
-        request.recognitionLevel = .accurate
+        request.recognitionLevel = VNRequestTextRecognitionLevel.accurate
         request.usesLanguageCorrection = true
         request.recognitionLanguages = ["en-US"]
 
@@ -141,7 +141,7 @@ class VisionOcrBridge: NSObject {
                 let text = recognizedStrings.joined(separator: "\n")
                 let averageConfidence = observations.isEmpty ? 0.0 :
                     observations.reduce(0.0) { sum, obs in
-                        sum + (obs.topCandidates(1).first?.confidence ?? 0.0)
+                        sum + Double(obs.topCandidates(1).first?.confidence ?? 0.0)
                     } / Double(observations.count)
 
                 if !text.isEmpty {
@@ -154,7 +154,7 @@ class VisionOcrBridge: NSObject {
             }
 
             // Configure request
-            request.recognitionLevel = .accurate
+            request.recognitionLevel = VNRequestTextRecognitionLevel.accurate
             request.usesLanguageCorrection = true
             request.recognitionLanguages = ["en-US"]
 
