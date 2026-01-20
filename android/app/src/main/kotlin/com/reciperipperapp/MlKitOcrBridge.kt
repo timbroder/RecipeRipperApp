@@ -69,19 +69,9 @@ class MlKitOcrBridge(
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
                     val text = visionText.text
-                    val confidence = if (visionText.textBlocks.isNotEmpty()) {
-                        // Calculate average confidence from text blocks
-                        val confidences = visionText.textBlocks.mapNotNull { block ->
-                            block.confidence
-                        }
-                        if (confidences.isNotEmpty()) {
-                            confidences.average()
-                        } else {
-                            1.0 // Default confidence if not available
-                        }
-                    } else {
-                        0.0
-                    }
+                    // ML Kit v16+ doesn't expose confidence scores directly
+                    // Use 1.0 if text was recognized, 0.0 otherwise
+                    val confidence = if (text.isNotEmpty()) 1.0 else 0.0
 
                     result.success(mapOf(
                         "text" to text,
@@ -137,23 +127,11 @@ class MlKitOcrBridge(
                     .addOnSuccessListener { visionText ->
                         val text = visionText.text
                         if (text.isNotEmpty()) {
-                            val confidence = if (visionText.textBlocks.isNotEmpty()) {
-                                val confidences = visionText.textBlocks.mapNotNull { block ->
-                                    block.confidence
-                                }
-                                if (confidences.isNotEmpty()) {
-                                    confidences.average()
-                                } else {
-                                    1.0
-                                }
-                            } else {
-                                0.0
-                            }
-
+                            // ML Kit v16+ doesn't expose confidence scores directly
                             results.add(mapOf(
                                 "imagePath" to imagePath,
                                 "text" to text,
-                                "confidence" to confidence
+                                "confidence" to 1.0
                             ))
                         }
 
