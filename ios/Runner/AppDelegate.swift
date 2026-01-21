@@ -1,5 +1,6 @@
 import UIKit
 import Flutter
+import BackgroundTasks
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -13,6 +14,13 @@ import Flutter
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
+
+    // Register background tasks before app finishes launching
+    if #available(iOS 13.0, *) {
+      BackgroundTaskBridge.shared.registerBackgroundTask()
+      BackgroundTaskBridge.shared.setup(with: controller.binaryMessenger)
+      BackgroundTaskBridge.shared.requestNotificationPermission()
+    }
 
     // Set up method channel for shared URLs (Sprint 1)
     let sharedUrlChannel = FlutterMethodChannel(

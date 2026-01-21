@@ -70,7 +70,7 @@ class _ProcessingScreenState extends State<ProcessingScreen>
   }
 
   Future<void> _checkBackgroundAvailability() async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
       final available = await BackgroundProcessingService.isAvailable();
       if (mounted) {
         setState(() {

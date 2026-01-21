@@ -13,8 +13,8 @@ void main() async {
   final databaseService = DatabaseService();
   await databaseService.initialize();
 
-  // Initialize WorkManager for background processing (Android only)
-  if (Platform.isAndroid) {
+  // Initialize background processing (Android WorkManager, iOS BGTaskScheduler)
+  if (Platform.isAndroid || Platform.isIOS) {
     await BackgroundProcessingService.initialize();
   }
 

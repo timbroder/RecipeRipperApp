@@ -16,7 +16,7 @@ import 'speech_transcription_service.dart';
 /// Unique task name for video processing
 const String backgroundProcessingTask = 'com.reciperipper.processVideo';
 
-/// Top-level callback dispatcher for WorkManager
+/// Top-level callback dispatcher for WorkManager (Android)
 /// Must be a top-level function (not a class method)
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -84,35 +84,115 @@ void callbackDispatcher() {
   });
 }
 
-/// Service for managing background video processing using WorkManager
+/// Service for managing background video processing
+/// Uses WorkManager on Android and BGTaskScheduler on iOS
 class BackgroundProcessingService {
+  // Platform channels
   static const _workManagerChannel = MethodChannel(
     'com.reciperipper/workmanager',
   );
+  static const _iosBackgroundChannel = MethodChannel(
+    'com.reciperipper/background_tasks',
+  );
 
-  /// Initialize WorkManager - must be called once at app startup
+  static bool _isInitialized = false;
+
+  /// Initialize background processing - must be called once at app startup
   static Future<void> initialize() async {
-    await Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: kDebugMode,
-    );
-    debugPrint('BackgroundProcessingService: Initialized');
+    if (_isInitialized) return;
+
+    if (Platform.isAndroid) {
+      await Workmanager().initialize(
+        callbackDispatcher,
+        isInDebugMode: kDebugMode,
+      );
+      debugPrint(
+          'BackgroundProcessingService: Android WorkManager initialized');
+    } else if (Platform.isIOS) {
+      // Set up method call handler for iOS background processing callbacks
+      _iosBackgroundChannel.setMethodCallHandler(_handleIosMethodCall);
+      debugPrint(
+          'BackgroundProcessingService: iOS BGTaskScheduler initialized');
+    }
+
+    _isInitialized = true;
+  }
+
+  /// Handle method calls from iOS native code
+  static Future<dynamic> _handleIosMethodCall(MethodCall call) async {
+    if (call.method == 'processInBackground') {
+      final args = call.arguments as Map<Object?, Object?>;
+      final jobId = args['jobId'] as String?;
+      final videoPath = args['videoPath'] as String?;
+      final sourceUrl = args['sourceUrl'] as String?;
+
+      if (jobId == null || videoPath == null) {
+        debugPrint('BackgroundProcessing iOS: Missing required parameters');
+        return false;
+      }
+
+      try {
+        debugPrint('BackgroundProcessing iOS: Starting job $jobId');
+
+        // Initialize services for background processing
+        final databaseService = DatabaseService();
+        await databaseService.initialize();
+
+        final notificationService = NotificationService();
+        await notificationService.initialize();
+
+        final processingService = ProcessingService(
+          databaseService: databaseService,
+          audioService: AudioExtractionService(),
+          speechService: SpeechTranscriptionService(),
+          frameService: FrameExtractionService(),
+          ocrService: OcrService(),
+        );
+
+        // Process the video
+        await processingService.processVideo(
+          videoPath,
+          sourceUrl: sourceUrl,
+          existingJobId: jobId,
+          onProgress: (id, status, progress, currentStep) {
+            debugPrint(
+              'BackgroundProcessing iOS: $currentStep (${(progress * 100).toInt()}%)',
+            );
+          },
+        );
+
+        debugPrint('BackgroundProcessing iOS: Job $jobId completed');
+        return true;
+      } catch (e) {
+        debugPrint('BackgroundProcessing iOS: Error - $e');
+        return false;
+      }
+    }
+    return null;
   }
 
   /// Check if background processing is available on this platform
   static Future<bool> isAvailable() async {
-    if (!Platform.isAndroid) {
-      return false;
+    if (Platform.isAndroid) {
+      try {
+        final result = await _workManagerChannel.invokeMethod<bool>(
+          'isWorkManagerAvailable',
+        );
+        return result ?? false;
+      } on PlatformException {
+        return false;
+      }
+    } else if (Platform.isIOS) {
+      try {
+        final result = await _iosBackgroundChannel.invokeMethod<bool>(
+          'isAvailable',
+        );
+        return result ?? false;
+      } on PlatformException {
+        return false;
+      }
     }
-
-    try {
-      final result = await _workManagerChannel.invokeMethod<bool>(
-        'isWorkManagerAvailable',
-      );
-      return result ?? false;
-    } on PlatformException {
-      return false;
-    }
+    return false;
   }
 
   /// Schedule a video for background processing
@@ -123,36 +203,50 @@ class BackgroundProcessingService {
     required String videoPath,
     String? sourceUrl,
   }) async {
-    // Schedule with WorkManager
-    await Workmanager().registerOneOffTask(
-      jobId,
-      backgroundProcessingTask,
-      inputData: {
+    if (Platform.isAndroid) {
+      // Schedule with WorkManager
+      await Workmanager().registerOneOffTask(
+        jobId,
+        backgroundProcessingTask,
+        inputData: {
+          'jobId': jobId,
+          'videoPath': videoPath,
+          'sourceUrl': sourceUrl,
+        },
+        constraints: Constraints(
+          networkType: NetworkType.not_required,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+          requiresDeviceIdle: false,
+          requiresStorageNotLow: false,
+        ),
+        existingWorkPolicy: ExistingWorkPolicy.keep,
+        backoffPolicy: BackoffPolicy.exponential,
+        backoffPolicyDelay: const Duration(seconds: 10),
+        tag: 'recipe_processing',
+      );
+      debugPrint('BackgroundProcessingService: Android scheduled job $jobId');
+    } else if (Platform.isIOS) {
+      // Schedule with BGTaskScheduler
+      await _iosBackgroundChannel.invokeMethod('scheduleProcessing', {
         'jobId': jobId,
         'videoPath': videoPath,
         'sourceUrl': sourceUrl,
-      },
-      constraints: Constraints(
-        networkType: NetworkType.not_required,
-        requiresBatteryNotLow: false,
-        requiresCharging: false,
-        requiresDeviceIdle: false,
-        requiresStorageNotLow: false,
-      ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
-      backoffPolicy: BackoffPolicy.exponential,
-      backoffPolicyDelay: const Duration(seconds: 10),
-      tag: 'recipe_processing',
-    );
+      });
+      debugPrint('BackgroundProcessingService: iOS scheduled job $jobId');
+    }
 
-    debugPrint('BackgroundProcessingService: Scheduled job $jobId');
     return jobId;
   }
 
   /// Cancel a specific background job
   static Future<void> cancelJob(String jobId) async {
     try {
-      await _workManagerChannel.invokeMethod('cancelWork', {'jobId': jobId});
+      if (Platform.isAndroid) {
+        await _workManagerChannel.invokeMethod('cancelWork', {'jobId': jobId});
+      } else if (Platform.isIOS) {
+        await _iosBackgroundChannel.invokeMethod('cancelJob', {'jobId': jobId});
+      }
       debugPrint('BackgroundProcessingService: Cancelled job $jobId');
     } on PlatformException catch (e) {
       debugPrint('BackgroundProcessingService: Failed to cancel job - $e');
@@ -162,7 +256,11 @@ class BackgroundProcessingService {
   /// Cancel all background jobs
   static Future<void> cancelAllJobs() async {
     try {
-      await _workManagerChannel.invokeMethod('cancelAllWork');
+      if (Platform.isAndroid) {
+        await _workManagerChannel.invokeMethod('cancelAllWork');
+      } else if (Platform.isIOS) {
+        await _iosBackgroundChannel.invokeMethod('cancelAllJobs');
+      }
       debugPrint('BackgroundProcessingService: Cancelled all jobs');
     } on PlatformException catch (e) {
       debugPrint('BackgroundProcessingService: Failed to cancel all jobs - $e');
@@ -172,11 +270,20 @@ class BackgroundProcessingService {
   /// Get the status of a background job
   static Future<BackgroundJobStatus?> getJobStatus(String jobId) async {
     try {
-      final result =
-          await _workManagerChannel.invokeMethod<Map<Object?, Object?>>(
-        'getWorkStatus',
-        {'jobId': jobId},
-      );
+      Map<Object?, Object?>? result;
+
+      if (Platform.isAndroid) {
+        result = await _workManagerChannel.invokeMethod<Map<Object?, Object?>>(
+          'getWorkStatus',
+          {'jobId': jobId},
+        );
+      } else if (Platform.isIOS) {
+        result =
+            await _iosBackgroundChannel.invokeMethod<Map<Object?, Object?>>(
+          'getJobStatus',
+          {'jobId': jobId},
+        );
+      }
 
       if (result == null) return null;
 

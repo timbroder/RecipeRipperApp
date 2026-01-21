@@ -411,10 +411,12 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
    - Completion and failure notifications
    - Platform-specific notification handling
 
-5. **Background Processing (Android)**:
-   - WorkManager integration for background task scheduling
-   - BackgroundProcessingService for Dart/WorkManager bridge
-   - ProcessingNotificationHelper for foreground notifications
+5. **Background Processing (Android & iOS)**:
+   - Android: WorkManager integration for background task scheduling
+   - iOS: BGTaskScheduler integration for background processing
+   - BackgroundProcessingService for unified Dart/native bridge
+   - ProcessingNotificationHelper (Android) for foreground notifications
+   - BackgroundTaskBridge (iOS) for BGTaskScheduler
    - Automatic transition to background when app is paused
    - Job status polling when app returns to foreground
    - "Continue in Background" button in ProcessingScreen
@@ -441,7 +443,9 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 **Native iOS Bridges:**
 - `ios/Runner/SpeechRecognitionBridge.swift` - Speech framework integration
 - `ios/Runner/VisionOcrBridge.swift` - Vision framework OCR
-- `ios/Runner/AppDelegate.swift` - Updated to register bridges
+- `ios/Runner/BackgroundTaskBridge.swift` - BGTaskScheduler for background processing
+- `ios/Runner/AppDelegate.swift` - Updated to register bridges and background tasks
+- `ios/Runner/Info.plist` - Added background modes and task identifiers
 
 **Native Android Bridges:**
 - `android/app/src/main/kotlin/com/reciperipperapp/SpeechRecognitionBridge.kt` - SpeechRecognizer API
@@ -460,11 +464,11 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 
 **Configuration:**
 - `pubspec.yaml` - Added ffmpeg_kit_flutter, flutter_local_notifications, and workmanager
-- `lib/main.dart` - Updated to initialize WorkManager on Android
+- `lib/main.dart` - Updated to initialize background processing on Android and iOS
 
 ### Deferred Items
 
-- iOS Background Tasks framework (basic foreground processing works; iOS background support deferred)
+- None - all Sprint 2 features are complete
 
 ### Technical Notes
 
@@ -474,6 +478,8 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 - Processing typically takes 20-40% of video duration
 - Temporary files are automatically cleaned up after processing
 - Recipe metadata (transcript + OCR text) is stored in the database for Sprint 3 parsing
-- Android background processing uses WorkManager with foreground service for reliable execution
-- When the app is backgrounded on Android, processing automatically switches to WorkManager
+- Background processing uses platform-native APIs:
+  - Android: WorkManager with foreground service for reliable execution
+  - iOS: BGTaskScheduler with processing task for background execution
+- When the app is backgrounded, processing automatically switches to background mode
 - Job status is polled when the app returns to foreground to update UI
