@@ -9,6 +9,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity: FlutterActivity() {
     private val SHARED_URL_CHANNEL = "com.reciperipper/shared_url"
     private var sharedUrl: String? = null
+    private var speechRecognitionBridge: SpeechRecognitionBridge? = null
+    private var mlKitOcrBridge: MlKitOcrBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -24,9 +26,14 @@ class MainActivity: FlutterActivity() {
             }
         }
 
-        // Platform channels will be set up here in future sprints
-        // Sprint 2: Speech recognition channel
-        // Sprint 2: OCR/ML Kit channel
+        // Set up Sprint 2 platform channels
+        speechRecognitionBridge = SpeechRecognitionBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        mlKitOcrBridge = MlKitOcrBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mlKitOcrBridge?.close()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

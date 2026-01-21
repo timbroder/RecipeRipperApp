@@ -1,10 +1,12 @@
 import UIKit
 import Flutter
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
   private let SHARED_URL_CHANNEL = "com.reciperipper/shared_url"
   private var sharedUrl: String?
+  private var speechRecognitionBridge: SpeechRecognitionBridge?
+  private var visionOcrBridge: VisionOcrBridge?
 
   override func application(
     _ application: UIApplication,
@@ -31,9 +33,12 @@ import Flutter
       }
     }
 
-    // Platform channels will be set up here in future sprints
-    // Sprint 2: Speech recognition channel
-    // Sprint 2: OCR/Vision framework channel
+    // Set up Sprint 2 platform channels
+    speechRecognitionBridge = SpeechRecognitionBridge()
+    speechRecognitionBridge?.setup(with: controller.binaryMessenger)
+
+    visionOcrBridge = VisionOcrBridge()
+    visionOcrBridge?.setup(with: controller.binaryMessenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
