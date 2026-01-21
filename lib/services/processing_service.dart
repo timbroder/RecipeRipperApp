@@ -33,27 +33,34 @@ class ProcessingService {
   ///
   /// [videoPath] - Path to the video file
   /// [sourceUrl] - Optional source URL for the video
+  /// [existingJobId] - Optional existing job ID (for background processing)
   /// [onProgress] - Callback for progress updates (jobId, status, progress, currentStep)
   /// Returns the processing job ID
   Future<String> processVideo(
     String videoPath, {
     String? sourceUrl,
+    String? existingJobId,
     void Function(String jobId, ProcessingStatus status, double progress,
             String currentStep)?
         onProgress,
   }) async {
-    // Create processing job
-    final jobId = _uuid.v4();
-    final job = ProcessingJob(
-      id: jobId,
-      sourceUrl: sourceUrl,
-      localVideoPath: videoPath,
-      status: ProcessingStatus.queued,
-      progress: 0.0,
-      createdAt: DateTime.now(),
-    );
+    // Use existing job ID or create new one
+    final jobId = existingJobId ?? _uuid.v4();
 
-    await _databaseService.insertProcessingJob(job);
+    // Check if job already exists (for background processing)
+    final existingJob = await _databaseService.getProcessingJob(jobId);
+    if (existingJob == null) {
+      // Create new processing job
+      final job = ProcessingJob(
+        id: jobId,
+        sourceUrl: sourceUrl,
+        localVideoPath: videoPath,
+        status: ProcessingStatus.queued,
+        progress: 0.0,
+        createdAt: DateTime.now(),
+      );
+      await _databaseService.insertProcessingJob(job);
+    }
 
     String? audioPath;
     List<String> framePaths = [];
@@ -327,5 +334,27 @@ class ProcessingService {
   /// Get a specific processing job
   Future<ProcessingJob?> getJob(String jobId) async {
     return _databaseService.getProcessingJob(jobId);
+  }
+
+  /// Create a processing job without starting processing
+  /// Used for background processing where we need to create the job first,
+  /// then schedule it via WorkManager
+  Future<String> createJob({
+    required String videoPath,
+    String? sourceUrl,
+  }) async {
+    final jobId = _uuid.v4();
+    final job = ProcessingJob(
+      id: jobId,
+      sourceUrl: sourceUrl,
+      localVideoPath: videoPath,
+      status: ProcessingStatus.queued,
+      progress: 0.0,
+      currentStep: 'Waiting to start...',
+      createdAt: DateTime.now(),
+    );
+
+    await _databaseService.insertProcessingJob(job);
+    return jobId;
   }
 }

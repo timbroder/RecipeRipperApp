@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../models/processing_job.dart';
+import '../services/background_processing_service.dart';
 import '../services/database_service.dart';
 import '../services/processing_service.dart';
 import '../services/notification_service.dart';
@@ -22,23 +26,122 @@ class ProcessingScreen extends StatefulWidget {
   State<ProcessingScreen> createState() => _ProcessingScreenState();
 }
 
-class _ProcessingScreenState extends State<ProcessingScreen> {
+class _ProcessingScreenState extends State<ProcessingScreen>
+    with WidgetsBindingObserver {
   late ProcessingService _processingService;
   late NotificationService _notificationService;
   late DatabaseService _databaseService;
   String? _jobId;
   ProcessingJob? _currentJob;
+  bool _isBackgroundProcessing = false;
+  bool _backgroundAvailable = false;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _databaseService = DatabaseService();
     _processingService = ProcessingService(
       databaseService: _databaseService,
     );
     _notificationService = NotificationService();
     _notificationService.initialize();
+    _checkBackgroundAvailability();
     _startProcessing();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused && !_isBackgroundProcessing) {
+      // App is going to background, switch to background processing if available
+      _switchToBackgroundProcessing();
+    } else if (state == AppLifecycleState.resumed && _isBackgroundProcessing) {
+      // App is back in foreground, start polling for updates
+      _startPollingForUpdates();
+    }
+  }
+
+  Future<void> _checkBackgroundAvailability() async {
+    if (Platform.isAndroid) {
+      final available = await BackgroundProcessingService.isAvailable();
+      if (mounted) {
+        setState(() {
+          _backgroundAvailable = available;
+        });
+      }
+    }
+  }
+
+  Future<void> _switchToBackgroundProcessing() async {
+    if (!_backgroundAvailable || _jobId == null) return;
+
+    // Schedule the job for background processing
+    await BackgroundProcessingService.scheduleProcessing(
+      jobId: _jobId!,
+      videoPath: widget.videoPath,
+      sourceUrl: widget.sourceUrl,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isBackgroundProcessing = true;
+      });
+    }
+  }
+
+  void _startPollingForUpdates() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (_jobId != null) {
+        final job = await _processingService.getJob(_jobId!);
+        if (job != null && mounted) {
+          setState(() {
+            _currentJob = job;
+          });
+
+          // Check if completed
+          if (job.status == ProcessingStatus.completed &&
+              job.recipeId != null) {
+            _pollTimer?.cancel();
+            _navigateToRecipe(job.recipeId!);
+          } else if (job.status == ProcessingStatus.failed) {
+            _pollTimer?.cancel();
+            _showError(job.errorMessage ?? 'Processing failed');
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _navigateToRecipe(String recipeId) async {
+    final recipe = await _databaseService.getRecipe(recipeId);
+    if (recipe != null && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => RecipeDetailScreen(recipe: recipe),
+        ),
+      );
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Processing failed: $message'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _startProcessing() async {
@@ -177,7 +280,9 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'This may take a few minutes. You can leave this screen and we\'ll notify you when it\'s done.',
+                        _isBackgroundProcessing
+                            ? 'Processing continues in the background. You\'ll be notified when it\'s done.'
+                            : 'This may take a few minutes. You can leave this screen and we\'ll notify you when it\'s done.',
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontSize: 13,
@@ -187,11 +292,70 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   ],
                 ),
               ),
+
+              // Background processing button (Android only)
+              if (_backgroundAvailable && !_isBackgroundProcessing) ...[
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: _moveToBackground,
+                  icon: const Icon(Icons.exit_to_app),
+                  label: const Text('Continue in Background'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+
+              // Background processing indicator
+              if (_isBackgroundProcessing) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade700),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Running in background',
+                        style: TextStyle(
+                          color: Colors.green.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _moveToBackground() async {
+    await _switchToBackgroundProcessing();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Processing moved to background'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate back to home screen
+      Navigator.of(context).pop();
+    }
   }
 
   Widget _buildStatusMessage(IconData icon, String title, String subtitle) {

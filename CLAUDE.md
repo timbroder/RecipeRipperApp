@@ -411,10 +411,19 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
    - Completion and failure notifications
    - Platform-specific notification handling
 
-5. **UI Components**:
+5. **Background Processing (Android)**:
+   - WorkManager integration for background task scheduling
+   - BackgroundProcessingService for Dart/WorkManager bridge
+   - ProcessingNotificationHelper for foreground notifications
+   - Automatic transition to background when app is paused
+   - Job status polling when app returns to foreground
+   - "Continue in Background" button in ProcessingScreen
+
+6. **UI Components**:
    - ProcessingScreen with real-time progress display
    - Circular progress indicator with percentage
    - Status icons for different processing stages
+   - Background processing button and status indicator (Android)
    - Automatic navigation to recipe detail upon completion
    - Updated VideoPreviewScreen to launch processing
 
@@ -427,6 +436,7 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 - `lib/services/ocr_service.dart` - OCR platform channel
 - `lib/services/processing_service.dart` - Main processing orchestrator
 - `lib/services/notification_service.dart` - Local notifications
+- `lib/services/background_processing_service.dart` - WorkManager integration for background processing
 
 **Native iOS Bridges:**
 - `ios/Runner/SpeechRecognitionBridge.swift` - Speech framework integration
@@ -436,8 +446,10 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 **Native Android Bridges:**
 - `android/app/src/main/kotlin/com/reciperipperapp/SpeechRecognitionBridge.kt` - SpeechRecognizer API
 - `android/app/src/main/kotlin/com/reciperipperapp/MlKitOcrBridge.kt` - ML Kit Text Recognition
-- `android/app/src/main/kotlin/com/reciperipperapp/MainActivity.kt` - Updated to register bridges
-- `android/app/build.gradle` - Added ML Kit dependency
+- `android/app/src/main/kotlin/com/reciperipperapp/ProcessingNotificationHelper.kt` - WorkManager foreground notifications
+- `android/app/src/main/kotlin/com/reciperipperapp/MainActivity.kt` - Updated to register bridges and WorkManager channel
+- `android/app/build.gradle` - Added ML Kit and WorkManager dependencies
+- `android/app/src/main/AndroidManifest.xml` - Added background processing permissions
 
 **UI Screens:**
 - `lib/screens/processing_screen.dart` - Real-time processing progress
@@ -447,13 +459,12 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 - `test/services/processing_service_test.dart` - Processing service unit tests
 
 **Configuration:**
-- `pubspec.yaml` - Added ffmpeg_kit_flutter and flutter_local_notifications
+- `pubspec.yaml` - Added ffmpeg_kit_flutter, flutter_local_notifications, and workmanager
+- `lib/main.dart` - Updated to initialize WorkManager on Android
 
 ### Deferred Items
 
-- iOS Background Tasks framework (basic foreground processing works)
-- Android WorkManager (basic foreground processing works)
-- Full background processing support will be added in future enhancement phase
+- iOS Background Tasks framework (basic foreground processing works; iOS background support deferred)
 
 ### Technical Notes
 
@@ -463,3 +474,6 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
 - Processing typically takes 20-40% of video duration
 - Temporary files are automatically cleaned up after processing
 - Recipe metadata (transcript + OCR text) is stored in the database for Sprint 3 parsing
+- Android background processing uses WorkManager with foreground service for reliable execution
+- When the app is backgrounded on Android, processing automatically switches to WorkManager
+- Job status is polled when the app returns to foreground to update UI
