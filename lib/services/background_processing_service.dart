@@ -214,7 +214,7 @@ class BackgroundProcessingService {
           'sourceUrl': sourceUrl,
         },
         constraints: Constraints(
-          networkType: NetworkType.not_required,
+          networkType: NetworkType.notRequired,
           requiresBatteryNotLow: false,
           requiresCharging: false,
           requiresDeviceIdle: false,

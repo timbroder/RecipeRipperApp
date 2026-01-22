@@ -16,11 +16,10 @@ import BackgroundTasks
     let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
 
     // Register background tasks before app finishes launching
-    if #available(iOS 13.0, *) {
-      BackgroundTaskBridge.shared.registerBackgroundTask()
-      BackgroundTaskBridge.shared.setup(with: controller.binaryMessenger)
-      BackgroundTaskBridge.shared.requestNotificationPermission()
-    }
+    // Note: BackgroundTaskBridge internally checks for iOS 13+ availability
+    BackgroundTaskBridge.shared.registerBackgroundTask()
+    BackgroundTaskBridge.shared.setup(with: controller.binaryMessenger)
+    BackgroundTaskBridge.shared.requestNotificationPermission()
 
     // Set up method channel for shared URLs (Sprint 1)
     let sharedUrlChannel = FlutterMethodChannel(
