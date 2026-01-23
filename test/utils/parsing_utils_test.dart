@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:recipe_ripper_app/utils/parsing_utils.dart';
+import 'package:recipe_ripper/utils/parsing_utils.dart';
 
 void main() {
   group('ParsingUtils', () {
@@ -97,9 +97,9 @@ void main() {
       });
 
       test('should normalize quotes and dashes', () {
-        expect(ParsingUtils.cleanText('"hello"'), '"hello"');
-        expect(ParsingUtils.cleanText(''hello''), "'hello'");
-        expect(ParsingUtils.cleanText('hello—world'), 'hello-world');
+        expect(ParsingUtils.cleanText('\u201Chello\u201D'), '"hello"');
+        expect(ParsingUtils.cleanText('\u2018hello\u2019'), "'hello'");
+        expect(ParsingUtils.cleanText('hello\u2014world'), 'hello-world');
       });
     });
 
@@ -209,7 +209,8 @@ void main() {
       });
 
       test('should remove empty lines', () {
-        final result = ParsingUtils.splitIntoLines('Line 1\n\nLine 2\n  \nLine 3');
+        final result =
+            ParsingUtils.splitIntoLines('Line 1\n\nLine 2\n  \nLine 3');
         expect(result, ['Line 1', 'Line 2', 'Line 3']);
       });
 

@@ -195,9 +195,9 @@ class ProcessingService {
       );
 
       // Calculate processing time
-      final startTime = (await _databaseService.getProcessingJob(jobId))
-              ?.createdAt ??
-          DateTime.now();
+      final startTime =
+          (await _databaseService.getProcessingJob(jobId))?.createdAt ??
+              DateTime.now();
       final processingTimeSeconds =
           DateTime.now().difference(startTime).inSeconds;
 

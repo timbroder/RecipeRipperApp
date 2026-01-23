@@ -79,7 +79,8 @@ class TextSplitter {
       String cleaned = videoTitle;
 
       // Remove common video title patterns
-      cleaned = cleaned.replaceAll(RegExp(r'\s*\|\s*.*$'), ''); // Remove "| Channel Name"
+      cleaned = cleaned.replaceAll(
+          RegExp(r'\s*\|\s*.*$'), ''); // Remove "| Channel Name"
       cleaned = cleaned.replaceAll(
         RegExp(r'\s*[-–—]\s*.*$'),
         '',

@@ -167,8 +167,7 @@ class Deduplicator {
       // Multiple ingredients with same item - merge if units match
       final byUnit = <String?, List<Ingredient>>{};
       for (final ingredient in group) {
-        final unitKey =
-            ingredient.unit != null ? ingredient.unit!.toLowerCase() : null;
+        final unitKey = ingredient.unit?.toLowerCase();
         byUnit.putIfAbsent(unitKey, () => []).add(ingredient);
       }
 

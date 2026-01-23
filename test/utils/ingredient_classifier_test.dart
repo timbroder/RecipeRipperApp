@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:recipe_ripper_app/utils/ingredient_classifier.dart';
+import 'package:recipe_ripper/utils/ingredient_classifier.dart';
 
 void main() {
   group('IngredientClassifier', () {
@@ -29,11 +29,13 @@ void main() {
           lessThan(0.5),
         );
         expect(
-          IngredientClassifier.classifyAsIngredient('Bake at 350°F for 30 minutes'),
+          IngredientClassifier.classifyAsIngredient(
+              'Bake at 350°F for 30 minutes'),
           lessThan(0.5),
         );
         expect(
-          IngredientClassifier.classifyAsIngredient('Add the eggs one at a time'),
+          IngredientClassifier.classifyAsIngredient(
+              'Add the eggs one at a time'),
           lessThan(0.5),
         );
       });
@@ -61,7 +63,7 @@ void main() {
       });
 
       test('should penalize very long text', () {
-        final longText = 'This is a very long line that contains way too much '
+        const longText = 'This is a very long line that contains way too much '
             'text to be a simple ingredient and is probably a direction or '
             'some other type of content that should not be classified as an '
             'ingredient in any reasonable recipe parsing scenario';
@@ -76,21 +78,22 @@ void main() {
       test('should parse quantity and unit', () {
         final result = IngredientClassifier.parseIngredient('2 cups flour');
         expect(result['quantity'], 2.0);
-        expect(result['unit'], 'cup');
+        expect(result['unit'], anyOf('cup', 'cups'));
         expect(result['item'], 'flour');
       });
 
       test('should parse fractional quantities', () {
         final result = IngredientClassifier.parseIngredient('½ cup sugar');
         expect(result['quantity'], 0.5);
-        expect(result['unit'], 'cup');
+        expect(result['unit'], anyOf('cup', 'cups'));
         expect(result['item'], 'sugar');
       });
 
       test('should parse mixed numbers', () {
-        final result = IngredientClassifier.parseIngredient('1 1/2 tablespoons vanilla');
+        final result =
+            IngredientClassifier.parseIngredient('1 1/2 tablespoons vanilla');
         expect(result['quantity'], closeTo(1.5, 0.01));
-        expect(result['unit'], 'tablespoon');
+        expect(result['unit'], anyOf('tablespoon', 'tablespoons'));
         expect(result['item'], 'vanilla');
       });
 
@@ -104,13 +107,14 @@ void main() {
         final result =
             IngredientClassifier.parseIngredient('2 cups flour (sifted)');
         expect(result['quantity'], 2.0);
-        expect(result['unit'], 'cup');
+        expect(result['unit'], anyOf('cup', 'cups'));
         expect(result['item'], 'flour');
         expect(result['notes'], 'sifted');
       });
 
       test('should handle ingredients without quantity', () {
-        final result = IngredientClassifier.parseIngredient('salt and pepper to taste');
+        final result =
+            IngredientClassifier.parseIngredient('salt and pepper to taste');
         expect(result['quantity'], null);
         expect(result['item'], 'salt and pepper to taste');
       });

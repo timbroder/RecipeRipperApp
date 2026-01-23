@@ -115,10 +115,8 @@ class IngredientClassifier {
 
     // Check for cooking units
     final words = cleaned.toLowerCase().split(RegExp(r'\s+'));
-    bool hasUnit = false;
     for (final word in words) {
       if (ParsingUtils.isValidCookingUnit(word)) {
-        hasUnit = true;
         score += 0.3;
         break;
       }
@@ -154,7 +152,8 @@ class IngredientClassifier {
     final lower = line.toLowerCase();
 
     // Check for numbered steps (e.g., "1.", "Step 1", "Step one")
-    if (RegExp(r'^\d+\.|\bstep\s+\d+|\bstep\s+(one|two|three)', caseSensitive: false)
+    if (RegExp(r'^\d+\.|\bstep\s+\d+|\bstep\s+(one|two|three)',
+            caseSensitive: false)
         .hasMatch(lower)) {
       return true;
     }

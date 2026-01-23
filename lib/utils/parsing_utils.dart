@@ -24,7 +24,6 @@ class ParsingUtils {
     // Weight
     'lb': 'pound',
     'lbs': 'pound',
-    'oz': 'ounce',
     'g': 'gram',
     'kg': 'kilogram',
     'mg': 'milligram',
@@ -132,26 +131,18 @@ class ParsingUtils {
   static double? parseFraction(String text) {
     text = text.trim();
 
-    // Check for unicode fractions
+    // Check for unicode fraction with whole number FIRST (e.g., "1½", "2¾")
     for (final entry in unicodeFractions.entries) {
-      if (text.contains(entry.key)) {
-        return entry.value;
+      final pattern = RegExp(r'^(\d+)\s*' + RegExp.escape(entry.key) + r'$');
+      final match = pattern.firstMatch(text);
+      if (match != null) {
+        final whole = int.parse(match.group(1)!);
+        return whole + entry.value;
       }
     }
 
-    // Handle slash fractions (e.g., "1/2", "3/4")
-    final slashMatch = RegExp(r'^(\d+)\s*/\s*(\d+)$').firstMatch(text);
-    if (slashMatch != null) {
-      final numerator = int.parse(slashMatch.group(1)!);
-      final denominator = int.parse(slashMatch.group(2)!);
-      if (denominator != 0) {
-        return numerator / denominator;
-      }
-    }
-
-    // Handle mixed numbers (e.g., "1 1/2", "2½")
-    final mixedMatch =
-        RegExp(r'^(\d+)\s+(\d+)\s*/\s*(\d+)$').firstMatch(text);
+    // Handle mixed numbers with slash fractions (e.g., "1 1/2", "2 3/4")
+    final mixedMatch = RegExp(r'^(\d+)\s+(\d+)\s*/\s*(\d+)$').firstMatch(text);
     if (mixedMatch != null) {
       final whole = int.parse(mixedMatch.group(1)!);
       final numerator = int.parse(mixedMatch.group(2)!);
@@ -161,13 +152,20 @@ class ParsingUtils {
       }
     }
 
-    // Check for unicode fraction with whole number (e.g., "1½")
+    // Handle simple slash fractions (e.g., "1/2", "3/4")
+    final slashMatch = RegExp(r'^(\d+)\s*/\s*(\d+)$').firstMatch(text);
+    if (slashMatch != null) {
+      final numerator = int.parse(slashMatch.group(1)!);
+      final denominator = int.parse(slashMatch.group(2)!);
+      if (denominator != 0) {
+        return numerator / denominator;
+      }
+    }
+
+    // Check for plain unicode fractions (e.g., "½", "¼")
     for (final entry in unicodeFractions.entries) {
-      final pattern = RegExp(r'^(\d+)\s*' + RegExp.escape(entry.key) + r'$');
-      final match = pattern.firstMatch(text);
-      if (match != null) {
-        final whole = int.parse(match.group(1)!);
-        return whole + entry.value;
+      if (text == entry.key) {
+        return entry.value;
       }
     }
 
@@ -212,12 +210,12 @@ class ParsingUtils {
     // Remove common OCR artifacts
     text = text.replaceAll(RegExp(r'[|•●○◉◎]'), '');
 
-    // Normalize quotes
-    text = text.replaceAll(RegExp(r'[""]'), '"');
-    text = text.replaceAll(RegExp(r"['']"), "'");
+    // Normalize quotes (curly quotes to straight quotes)
+    text = text.replaceAll(RegExp('[\u201C\u201D]'), '"');
+    text = text.replaceAll(RegExp('[\u2018\u2019]'), "'");
 
-    // Normalize dashes
-    text = text.replaceAll(RegExp(r'[—–]'), '-');
+    // Normalize dashes (em/en dashes to hyphens)
+    text = text.replaceAll(RegExp('[\u2014\u2013]'), '-');
 
     // Remove zero-width characters
     text = text.replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '');
