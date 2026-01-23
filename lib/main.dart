@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
+import 'services/background_processing_service.dart';
 import 'services/database_service.dart';
 
 void main() async {
@@ -9,6 +12,11 @@ void main() async {
   // Initialize database
   final databaseService = DatabaseService();
   await databaseService.initialize();
+
+  // Initialize background processing (Android WorkManager, iOS BGTaskScheduler)
+  if (Platform.isAndroid || Platform.isIOS) {
+    await BackgroundProcessingService.initialize();
+  }
 
   runApp(
     MultiProvider(

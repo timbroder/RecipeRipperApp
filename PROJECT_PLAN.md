@@ -219,12 +219,18 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 - [x] Create notification channel for progress updates
 - [x] Send notifications on completion/failure
 - [x] Handle app state transitions (foreground ↔ background)
-- [ ] Implement iOS Background Tasks (deferred - basic foreground processing implemented)
-  - [ ] Register background task identifier
-  - [ ] Handle task expiration and cleanup
-- [ ] Implement Android WorkManager (deferred - basic foreground processing implemented)
-  - [ ] Create Worker class for processing
-  - [ ] Handle constraints (charging, idle)
+- [x] Implement iOS Background Tasks
+  - [x] Register background task identifier in Info.plist
+  - [x] Create BackgroundTaskBridge for BGTaskScheduler
+  - [x] Handle task expiration and cleanup
+  - [x] Process video in background when app is backgrounded
+  - [x] Show notification during background processing
+- [x] Implement Android WorkManager
+  - [x] Create Worker class for processing
+  - [x] Create BackgroundProcessingService for Dart integration
+  - [x] Handle constraints (battery, network, storage)
+  - [x] Process video in background when app is backgrounded
+  - [x] Show notification during background processing
 
 **Data Pipeline**
 - [x] Create ProcessingService to orchestrate steps
@@ -250,7 +256,7 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 - [x] Notification appears when processing completes
 - [x] Battery usage is reasonable (<20% for 10-min video)
 - [x] Works completely offline after video download
-- [ ] Processing continues when app is backgrounded (deferred to future enhancement)
+- [x] Processing continues when app is backgrounded (Android via WorkManager; iOS via BGTaskScheduler)
 
 #### What Was Built
 
@@ -285,17 +291,28 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
   - Processing started, progress updates, completion, and failure notifications
   - Platform-specific notification handling (iOS/Android)
   - Custom notification channels
+- **BackgroundProcessingService**: Background processing for both platforms
+  - Android: WorkManager integration via platform channels
+  - iOS: BGTaskScheduler integration via platform channels
+  - Schedule background processing jobs
+  - Job status tracking (enqueued, running, succeeded, failed)
+  - Cancel individual or all background jobs
+  - Automatic transition to background when app is paused
 
 **Native Platform Bridges:**
 - **iOS (Swift)**:
   - `SpeechRecognitionBridge.swift`: Speech framework integration
   - `VisionOcrBridge.swift`: Vision framework for OCR
-  - Updated `AppDelegate.swift` to register bridges
+  - `BackgroundTaskBridge.swift`: BGTaskScheduler for background processing
+  - Updated `AppDelegate.swift` to register bridges and background tasks
+  - Updated `Info.plist` with background modes and task identifiers
 - **Android (Kotlin)**:
   - `SpeechRecognitionBridge.kt`: SpeechRecognizer API integration
   - `MlKitOcrBridge.kt`: ML Kit Text Recognition
-  - Updated `MainActivity.kt` to register bridges
-  - Updated `build.gradle` to include ML Kit dependency
+  - `ProcessingNotificationHelper.kt`: Helper for WorkManager foreground notifications
+  - Updated `MainActivity.kt` to register bridges and WorkManager method channel
+  - Updated `build.gradle` to include ML Kit and WorkManager dependencies
+  - Updated `AndroidManifest.xml` with background processing permissions
 
 **UI Components:**
 - **ProcessingScreen**: Real-time processing progress display
@@ -303,6 +320,9 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
   - Current step description
   - Status icons for different processing stages
   - Informational messages about background processing
+  - "Continue in Background" button (Android only)
+  - Automatic transition to background processing when app is paused
+  - Polling for job status updates when returning from background
   - Automatic navigation to recipe detail upon completion
 
 **Database Updates:**
@@ -315,9 +335,7 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 - Processing job state machine tests
 
 **Deferred Items:**
-- iOS Background Tasks framework (basic foreground processing implemented)
-- Android WorkManager (basic foreground processing implemented)
-- Full background processing support will be added in future enhancement phase
+- None - all Sprint 2 features are complete
 
 ---
 

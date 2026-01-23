@@ -58,8 +58,18 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Recipe Ripper needs camera access to record videos for recipe extraction.</string>
 
-	<!-- Background modes (to be enabled in future sprint) -->
-	<!-- Will be added in Sprint 2 for background processing -->
+	<!-- Background modes for processing -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+		<string>fetch</string>
+	</array>
+
+	<!-- Background task identifiers -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.reciperipper.videoProcessing</string>
+	</array>
 
 	<!-- Minimum iOS version -->
 	<key>MinimumOSVersion</key>
