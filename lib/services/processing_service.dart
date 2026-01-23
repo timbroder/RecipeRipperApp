@@ -7,6 +7,7 @@ import 'database_service.dart';
 import 'frame_extraction_service.dart';
 import 'ocr_service.dart';
 import 'speech_transcription_service.dart';
+import 'recipe_parsing_service.dart';
 
 /// Service that orchestrates the entire video processing pipeline
 class ProcessingService {
@@ -179,36 +180,39 @@ class ProcessingService {
         },
       );
 
-      // Step 5: Create recipe with extracted data
+      // Step 5: Parse recipe from extracted data
       await _updateJob(
         jobId,
         status: ProcessingStatus.parsing,
         progress: 0.9,
-        currentStep: 'Creating recipe...',
+        currentStep: 'Parsing recipe...',
       );
       onProgress?.call(
         jobId,
         ProcessingStatus.parsing,
         0.9,
-        'Creating recipe...',
+        'Parsing recipe...',
       );
 
-      // Create a basic recipe structure
-      // Parsing logic will be implemented in Sprint 3
+      // Calculate processing time
+      final startTime = (await _databaseService.getProcessingJob(jobId))
+              ?.createdAt ??
+          DateTime.now();
+      final processingTimeSeconds =
+          DateTime.now().difference(startTime).inSeconds;
+
+      // Use RecipeParsingService to parse the recipe
       final videoFileName = path.basenameWithoutExtension(videoPath);
-      final recipe = Recipe(
-        id: _uuid.v4(),
-        title: videoFileName,
+      final recipe = await RecipeParsingService.parseRecipe(
+        transcript: transcript,
+        ocrText: ocrText,
+        videoTitle: videoFileName,
         sourceUrl: sourceUrl,
         sourcePlatform: _detectPlatform(sourceUrl),
-        ingredients: [], // Will be populated in Sprint 3
-        directions: [], // Will be populated in Sprint 3
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
         metadata: RecipeMetadata(
           transcript: transcript,
           ocrText: ocrText,
-          processingTimeSeconds: 0, // Will be calculated
+          processingTimeSeconds: processingTimeSeconds,
           frameCount: framePaths.length,
         ),
       );
