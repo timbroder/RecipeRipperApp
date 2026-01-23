@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/recipe_provider.dart';
+import '../providers/sync_provider.dart';
 import '../services/video_service.dart';
 import '../services/share_handler_service.dart';
 import '../models/recipe.dart';
@@ -25,7 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Delay data loading to after the first frame to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
     _initializeShareHandler();
   }
 
@@ -482,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: const Text('Share'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Implement share in Sprint 5
+                  _shareRecipe(recipe);
                 },
               ),
               ListTile(
@@ -505,6 +509,19 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Future<void> _shareRecipe(Recipe recipe) async {
+    try {
+      final syncProvider = context.read<SyncProvider>();
+      await syncProvider.exportService.shareRecipeAsText(recipe);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sharing: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmDeleteRecipe(Recipe recipe) async {
