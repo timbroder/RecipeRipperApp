@@ -481,8 +481,8 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 
 ---
 
-### Sprint 4: Recipe Viewing & Editing UI
-**Duration**: 2 weeks  
+### Sprint 4: Recipe Viewing & Editing UI ✅ COMPLETE
+**Duration**: 2 weeks
 **Goal**: Beautiful, intuitive UI for browsing and editing recipes
 
 #### User Stories
@@ -495,67 +495,132 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 #### Technical Tasks
 
 **Home Screen - Recipe Grid**
-- [ ] Create card widget with thumbnail, title, source
-- [ ] Implement grid layout (2 columns on phone, 3+ on tablet)
-- [ ] Add pull-to-refresh
-- [ ] Show empty state when no recipes
-- [ ] Show processing jobs with progress indicators
-- [ ] Add floating action button for "Add Recipe"
-- [ ] Implement smooth animations and transitions
+- [x] Create card widget with thumbnail, title, source
+- [x] Implement grid layout (2 columns on phone, 3+ on tablet)
+- [x] Add pull-to-refresh
+- [x] Show empty state when no recipes
+- [x] Show processing jobs with progress indicators
+- [x] Add floating action button for "Add Recipe"
+- [x] Implement smooth animations and transitions
 
 **Recipe Detail Screen**
-- [ ] Create beautiful recipe display layout
-  - [ ] Header with thumbnail and title
-  - [ ] Ingredients section with checkboxes (for cooking mode)
-  - [ ] Directions section with numbered steps
-  - [ ] Metadata footer (source, date, processing time)
-- [ ] Add "Edit" and "Delete" buttons
-- [ ] Add "Share" button (export recipe)
-- [ ] Implement swipe gestures (back navigation)
+- [x] Create beautiful recipe display layout
+  - [x] Header with thumbnail and title
+  - [x] Ingredients section with checkboxes (for cooking mode)
+  - [x] Directions section with numbered steps
+  - [x] Metadata footer (source, date, processing time)
+- [x] Add "Edit" and "Delete" buttons
+- [x] Add "Share" button (export recipe)
+- [x] Implement swipe gestures (back navigation)
 
 **Recipe Edit Screen**
-- [ ] Create form for editing recipe title
-- [ ] Create editable list for ingredients
-  - [ ] Add/remove ingredient rows
-  - [ ] Inline editing for quantity, unit, item
-  - [ ] Reorder ingredients (drag handles)
-- [ ] Create editable list for directions
-  - [ ] Add/remove direction steps
-  - [ ] Inline editing for step text
-  - [ ] Auto-renumber steps
-- [ ] Add "Save" and "Cancel" buttons
-- [ ] Show unsaved changes warning
+- [x] Create form for editing recipe title
+- [x] Create editable list for ingredients
+  - [x] Add/remove ingredient rows
+  - [x] Inline editing for quantity, unit, item
+  - [x] Reorder ingredients (drag handles)
+- [x] Create editable list for directions
+  - [x] Add/remove direction steps
+  - [x] Inline editing for step text
+  - [x] Auto-renumber steps
+- [x] Add "Save" and "Cancel" buttons
+- [x] Show unsaved changes warning
 
 **Shared Widgets**
-- [ ] Create reusable ingredient card widget
-- [ ] Create reusable direction card widget
-- [ ] Create loading skeleton screens
-- [ ] Create error state widgets
-- [ ] Implement consistent theming (colors, fonts, spacing)
+- [x] Create reusable ingredient card widget
+- [x] Create reusable direction card widget
+- [x] Create loading skeleton screens
+- [x] Create error state widgets
+- [x] Implement consistent theming (colors, fonts, spacing)
 
 **State Management**
-- [ ] Choose state management solution (Provider, Riverpod, or Bloc)
-- [ ] Implement RecipeProvider / RecipeBloc
-- [ ] Handle loading, success, error states
-- [ ] Implement optimistic updates for editing
+- [x] Choose state management solution (Provider, Riverpod, or Bloc)
+- [x] Implement RecipeProvider / RecipeBloc
+- [x] Handle loading, success, error states
+- [x] Implement optimistic updates for editing
 
 #### Deliverables
-- Polished home screen with recipe grid
-- Recipe detail screen with all info
-- Recipe edit screen with full functionality
-- Smooth animations and transitions
-- Consistent design system
+- ✅ Polished home screen with recipe grid
+- ✅ Recipe detail screen with all info
+- ✅ Recipe edit screen with full functionality
+- ✅ Smooth animations and transitions
+- ✅ Consistent design system
 
 #### Dependencies
-- Sprint 3 complete
+- Sprint 3 complete ✅
 
 #### Acceptance Criteria
-- [ ] UI matches modern mobile design standards
-- [ ] Smooth 60fps scrolling on recipe grid
-- [ ] Editing is intuitive (no accidental deletions)
-- [ ] Works well on various screen sizes (small phones to tablets)
-- [ ] Dark mode support (optional but recommended)
-- [ ] Accessibility features (VoiceOver/TalkBack support)
+- [x] UI matches modern mobile design standards
+- [x] Smooth 60fps scrolling on recipe grid
+- [x] Editing is intuitive (no accidental deletions)
+- [x] Works well on various screen sizes (small phones to tablets)
+- [x] Dark mode support (optional but recommended)
+- [x] Accessibility features (VoiceOver/TalkBack support)
+
+#### What Was Built
+
+**Reusable Widget Library (`lib/widgets/`):**
+- **RecipeCard**: Beautiful recipe card with thumbnail, title, source platform, ingredient count, and press animation
+- **IngredientItem**: Ingredient display with optional checkbox for cooking mode, rich text formatting for quantity/unit/item
+- **DirectionStep**: Direction step with step number badge, checkbox support, and active step highlighting
+- **LoadingSkeleton**: Shimmer loading placeholders (RecipeCardSkeleton, RecipeDetailSkeleton, RecipeGridSkeleton)
+- **EmptyState**: Configurable empty state with factory constructors (noRecipes, noIngredients, noDirections, noSearchResults)
+- **ErrorState**: Error display with retry button and factory constructors (network, loadFailed, processingFailed, permissionDenied)
+- **ProcessingJobCard**: Processing job card showing progress, status icon, and current step
+
+**State Management:**
+- **RecipeProvider** (`lib/providers/recipe_provider.dart`):
+  - Centralized state management for recipes and processing jobs
+  - Search/filter functionality
+  - Loading, error, and success state handling
+  - CRUD operations with automatic UI updates
+
+**Enhanced Screens:**
+
+- **HomeScreen** (`lib/screens/home_screen.dart`):
+  - Responsive grid layout (2-5 columns based on screen width)
+  - Pull-to-refresh functionality
+  - Search with real-time filtering
+  - Processing jobs section showing active video processing
+  - Long-press context menu for recipe options
+  - Loading skeleton during initial load
+  - Error state with retry option
+  - Empty state with call-to-action
+
+- **RecipeDetailScreen** (`lib/screens/recipe_detail_screen.dart`):
+  - Collapsing SliverAppBar with hero thumbnail animation
+  - Cooking Mode with progress tracking
+    - Checkbox support for ingredients and directions
+    - Auto-advance through steps
+    - Progress bars showing completion percentage
+  - Share functionality (copy as Markdown or JSON)
+  - Platform-specific icons for video sources
+  - Recipe metadata display in card format
+  - Floating action button for toggling cooking mode
+
+- **RecipeEditScreen** (`lib/screens/recipe_edit_screen.dart`):
+  - Card-based layout with proper TextEditingController management
+  - Reorderable ingredient and direction lists with drag handles
+  - Add/remove functionality with visual feedback
+  - Loading state during save operation
+  - Unsaved changes warning on back navigation
+  - Floating save button with loading indicator
+  - Empty state guidance for ingredients/directions
+
+**Widget Tests:**
+- Comprehensive widget tests for all new widgets (`test/widgets/widgets_test.dart`)
+- Tests for rendering, callbacks, checkbox behavior, factory constructors
+
+**Deferred Items:**
+- None - all Sprint 4 features are complete
+
+**Technical Notes:**
+- Uses Provider package for state management (already in dependencies)
+- Material 3 design system throughout
+- Responsive layouts using LayoutBuilder and SliverLayoutBuilder
+- Hero animations for smooth screen transitions
+- Proper controller disposal to prevent memory leaks
+- Dark mode support via system theme
 
 ---
 
@@ -885,6 +950,6 @@ Convert RecipeRipper from a Python CLI tool to a fully self-contained Flutter mo
 
 ---
 
-**Version**: 1.4
+**Version**: 1.5
 **Last Updated**: 2026-01-23
-**Status**: Sprint 3 Complete - Ready for Sprint 4
+**Status**: Sprint 4 Complete - Ready for Sprint 5
