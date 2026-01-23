@@ -511,8 +511,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Clear Data
 
   Future<void> _showClearDataDialog() async {
-    final recipeProvider =
-        Provider.of<RecipeProvider>(context, listen: false);
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
 
     final confirmed = await showDialog<bool>(
       context: context,
