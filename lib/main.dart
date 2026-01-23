@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/recipe_provider.dart';
+import 'providers/sync_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/background_processing_service.dart';
 import 'services/database_service.dart';
@@ -19,6 +20,10 @@ void main() async {
     await BackgroundProcessingService.initialize();
   }
 
+  // Create sync provider (depends on database service)
+  final syncProvider = SyncProvider(databaseService);
+  await syncProvider.initialize();
+
   runApp(
     MultiProvider(
       providers: [
@@ -26,6 +31,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => RecipeProvider(databaseService),
         ),
+        ChangeNotifierProvider.value(value: syncProvider),
       ],
       child: const RecipeRipperApp(),
     ),

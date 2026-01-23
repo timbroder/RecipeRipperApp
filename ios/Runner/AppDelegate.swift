@@ -1,6 +1,7 @@
 import UIKit
 import Flutter
 import BackgroundTasks
+import CloudKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,6 +9,7 @@ import BackgroundTasks
   private var sharedUrl: String?
   private var speechRecognitionBridge: SpeechRecognitionBridge?
   private var visionOcrBridge: VisionOcrBridge?
+  private var iCloudBridge: ICloudBridge?
 
   override func application(
     _ application: UIApplication,
@@ -46,6 +48,10 @@ import BackgroundTasks
 
     visionOcrBridge = VisionOcrBridge()
     visionOcrBridge?.setup(with: controller.binaryMessenger)
+
+    // Set up Sprint 5 iCloud sync
+    iCloudBridge = ICloudBridge.shared
+    iCloudBridge?.setup(with: controller.binaryMessenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

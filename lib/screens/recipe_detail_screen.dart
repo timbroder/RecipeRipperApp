@@ -4,8 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/recipe.dart';
 import '../providers/recipe_provider.dart';
+import '../providers/sync_provider.dart';
+import '../services/export_service.dart';
 import '../widgets/widgets.dart';
 import 'recipe_edit_screen.dart';
 
@@ -140,11 +143,50 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  Icons.copy,
+                  Icons.share,
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
-              title: const Text('Copy as Text'),
+              title: const Text('Share'),
+              subtitle: const Text('Send to other apps'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAsText();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.file_download,
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+                ),
+              ),
+              title: const Text('Export as File'),
+              subtitle: const Text('Save as JSON or Markdown file'),
+              onTap: () {
+                Navigator.pop(context);
+                _showExportDialog();
+              },
+            ),
+            const Divider(indent: 16, endIndent: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.copy,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              title: const Text('Copy as Markdown'),
               subtitle: const Text('Human-readable format'),
               onTap: () {
                 Navigator.pop(context);
@@ -155,12 +197,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.code,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               title: const Text('Copy as JSON'),
@@ -175,6 +217,68 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _shareAsText() async {
+    try {
+      final syncProvider = context.read<SyncProvider>();
+      await syncProvider.exportService.shareRecipeAsText(_recipe);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sharing: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showExportDialog() async {
+    final format = await showDialog<ExportFormat>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Export Format'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, ExportFormat.json),
+            child: const ListTile(
+              leading: Icon(Icons.code),
+              title: Text('JSON'),
+              subtitle: Text('Can be re-imported into the app'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, ExportFormat.markdown),
+            child: const ListTile(
+              leading: Icon(Icons.description),
+              title: Text('Markdown'),
+              subtitle: Text('Human-readable format'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (format == null) return;
+
+    try {
+      final syncProvider = context.read<SyncProvider>();
+      final result = await syncProvider.exportService.exportAndShareRecipe(
+        _recipe,
+        format,
+      );
+
+      if (mounted && !result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: ${result.errorMessage}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export error: $e')),
+        );
+      }
+    }
   }
 
   void _copyAsText() {

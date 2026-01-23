@@ -332,7 +332,7 @@ Check the original Python implementation for parsing logic reference:
 ---
 
 **Last Updated**: 2026-01-23
-**Current Phase**: Sprint 4 Complete - Ready for Sprint 5
+**Current Phase**: Sprint 5 Complete - Ready for Sprint 6
 
 ## Sprint 1 Completion Summary
 
@@ -652,3 +652,107 @@ Sprint 4 focused on building beautiful, intuitive UI for browsing and editing re
 ### Next Steps
 
 Sprint 5 will focus on export features and cloud sync (iCloud Drive, Google Drive).
+
+## Sprint 5 Completion Summary
+
+Sprint 5 focused on cloud sync and export functionality - enabling recipes to sync across devices and be exported in various formats.
+
+### Features Implemented
+
+1. **Export Service**:
+   - JSON export (structured, re-importable)
+   - Markdown export (human-readable)
+   - Plain text export for quick sharing
+   - Single recipe and all recipes export
+   - Share via native share sheet
+
+2. **Import Service**:
+   - JSON import (single recipe, arrays, export format)
+   - Markdown import (best-effort parsing)
+   - Fraction parsing (slash, unicode, mixed numbers)
+   - Unit extraction (40+ cooking units)
+   - Three import modes: skip, replace, or rename duplicates
+   - Validation with warnings and errors
+
+3. **iOS iCloud Sync**:
+   - iCloud Drive integration via platform channel
+   - File-based sync (recipes.json in Documents)
+   - Account status detection
+   - Automatic sync every 15 minutes
+
+4. **Android Google Drive Sync**:
+   - Google Drive API integration via googleapis package
+   - OAuth authentication via google_sign_in
+   - App folder for recipe storage
+   - Bidirectional sync with conflict resolution
+
+5. **Enhanced Settings Screen**:
+   - Cloud sync section with enable/disable toggle
+   - Account display and sign out
+   - Sync status indicator with manual sync
+   - Export all recipes (JSON or Markdown)
+   - Import recipes with mode selection
+   - Storage usage display
+   - Clear all data option
+   - GitHub links for issues and source code
+
+6. **Enhanced Recipe Detail Screen**:
+   - Share button with modal options
+   - Share as text to other apps
+   - Export as file (JSON or Markdown)
+   - Copy as Markdown/JSON to clipboard
+
+### Files Added/Modified
+
+**New Services:**
+- `lib/services/export_service.dart` - Export to JSON/Markdown
+- `lib/services/import_service.dart` - Import from JSON/Markdown
+- `lib/services/cloud_sync_service.dart` - Cloud sync abstraction and implementations
+
+**New Providers:**
+- `lib/providers/sync_provider.dart` - Sync state management
+
+**Native iOS:**
+- `ios/Runner/ICloudBridge.swift` - iCloud Drive platform channel
+- `ios/Runner/Runner.entitlements` - iCloud entitlements
+- `ios/Runner/AppDelegate.swift` - Register iCloud bridge
+
+**Updated Screens:**
+- `lib/screens/settings_screen.dart` - Full rewrite with sync/export/import
+- `lib/screens/recipe_detail_screen.dart` - Enhanced sharing options
+
+**Updated Core:**
+- `lib/main.dart` - Added SyncProvider to providers list
+- `lib/providers/recipe_provider.dart` - Added clearAllRecipes method
+- `pubspec.yaml` - Added Sprint 5 dependencies
+
+**Tests:**
+- `test/services/export_service_test.dart` - Export service tests
+- `test/services/import_service_test.dart` - Import service tests
+
+### Dependencies Added
+- share_plus: ^10.0.0
+- package_info_plus: ^8.0.0
+- url_launcher: ^6.2.1
+- google_sign_in: ^6.2.1
+- googleapis: ^13.0.0
+- googleapis_auth: ^1.6.0
+- extension_google_sign_in_as_googleapis_auth: ^2.0.12
+
+### Deferred Items
+
+- None - all Sprint 5 features are complete
+
+### Technical Notes
+
+- iCloud uses iCloud Drive (Documents folder) for file-based sync
+- Google Drive uses googleapis package for API access
+- Conflict resolution defaults to newest-wins (configurable)
+- Auto-sync interval is 15 minutes when enabled
+- Import handles multiple formats: JSON (single, array, export format) and Markdown
+- Markdown parsing extracts ingredients, directions, and recipe titles
+- All sync operations show progress indicators
+
+### Next Steps
+
+Sprint 6 will focus on polish, comprehensive testing, and launch preparation.
