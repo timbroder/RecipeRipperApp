@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return AppBar(
-      title: const Text('Recipe Ripper'),
+      title: const Text('Recipe Slurp'),
       actions: [
         IconButton(
           icon: const Icon(Icons.search),

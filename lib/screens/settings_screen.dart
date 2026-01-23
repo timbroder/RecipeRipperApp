@@ -277,9 +277,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onTap: () {
             showLicensePage(
               context: context,
-              applicationName: 'Recipe Ripper',
+              applicationName: 'Recipe Slurp',
               applicationVersion: _appVersion,
-              applicationLegalese: '© 2026 Recipe Ripper',
+              applicationLegalese: '© 2026 Recipe Slurp',
             );
           },
         ),

@@ -33,18 +33,18 @@ void main() async {
         ),
         ChangeNotifierProvider.value(value: syncProvider),
       ],
-      child: const RecipeRipperApp(),
+      child: const RecipeSlurpApp(),
     ),
   );
 }
 
-class RecipeRipperApp extends StatelessWidget {
-  const RecipeRipperApp({super.key});
+class RecipeSlurpApp extends StatelessWidget {
+  const RecipeSlurpApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Recipe Ripper',
+      title: 'Recipe Slurp',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

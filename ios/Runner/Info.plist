@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Recipe Ripper</string>
+	<string>Recipe Slurp</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>recipe_ripper</string>
+	<string>Recipe Slurp</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -50,13 +50,13 @@
 
 	<!-- Privacy permissions -->
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Recipe Ripper needs access to speech recognition to transcribe audio from cooking videos.</string>
+	<string>Recipe Slurp needs access to speech recognition to transcribe audio from cooking videos.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Recipe Ripper needs microphone access to transcribe audio from videos.</string>
+	<string>Recipe Slurp needs microphone access to transcribe audio from videos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Recipe Ripper needs access to your photo library to select videos for recipe extraction.</string>
+	<string>Recipe Slurp needs access to your photo library to select videos for recipe extraction.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Recipe Ripper needs camera access to record videos for recipe extraction.</string>
+	<string>Recipe Slurp needs camera access to record videos for recipe extraction.</string>
 
 	<!-- Background modes for processing -->
 	<key>UIBackgroundModes</key>

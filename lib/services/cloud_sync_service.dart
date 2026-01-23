@@ -317,7 +317,7 @@ class ICloudSyncService extends CloudSyncService {
 class GoogleDriveSyncService extends CloudSyncService {
   static const _prefsKeyEnabled = 'gdrive_sync_enabled';
   static const _prefsKeyLastSync = 'gdrive_last_sync';
-  static const _folderName = 'RecipeRipper';
+  static const _folderName = 'Recipe Slurp';
   static const _fileName = 'recipes.json';
 
   final DatabaseService _databaseService;
