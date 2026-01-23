@@ -332,7 +332,7 @@ Check the original Python implementation for parsing logic reference:
 ---
 
 **Last Updated**: 2026-01-23
-**Current Phase**: Sprint 3 Complete - Ready for Sprint 4
+**Current Phase**: Sprint 4 Complete - Ready for Sprint 5
 
 ## Sprint 1 Completion Summary
 
@@ -564,3 +564,91 @@ Sprint 3 focused on recipe parsing and storage - converting raw transcript and O
 ### Next Steps
 
 Sprint 4 will focus on building the recipe viewing and editing UI.
+
+## Sprint 4 Completion Summary
+
+Sprint 4 focused on building beautiful, intuitive UI for browsing and editing recipes with modern Material 3 design.
+
+### Features Implemented
+
+1. **Reusable Widget Library** (`lib/widgets/`):
+   - RecipeCard with thumbnail, title, source badge, ingredient count, press animation
+   - IngredientItem with checkbox support for cooking mode, rich text formatting
+   - DirectionStep with step number badge, active step highlighting
+   - LoadingSkeleton with shimmer effect (cards, grid, detail page)
+   - EmptyState with customizable icon, title, message, action button
+   - ErrorState with retry functionality
+   - ProcessingJobCard for active video processing display
+
+2. **RecipeProvider State Management**:
+   - Centralized recipe and processing job state
+   - Search/filter functionality with real-time updates
+   - Loading, error, success state handling
+   - CRUD operations with automatic UI refresh
+
+3. **Enhanced Home Screen**:
+   - Responsive grid layout (2-5 columns based on width)
+   - Pull-to-refresh
+   - Real-time search with filtering
+   - Processing jobs section for active videos
+   - Long-press context menu
+   - Loading skeletons during initial load
+   - Empty state with call-to-action
+
+4. **Enhanced Recipe Detail Screen**:
+   - Collapsing SliverAppBar with hero thumbnail animation
+   - Cooking Mode with checkboxes and progress tracking
+   - Share functionality (Markdown and JSON export)
+   - Platform-specific source icons
+   - Metadata display card
+
+5. **Enhanced Recipe Edit Screen**:
+   - Card-based layout with proper controller management
+   - Reorderable ingredient/direction lists
+   - Add/remove with visual feedback
+   - Save loading state
+   - Unsaved changes warning
+
+### Files Added/Modified
+
+**New Widgets:**
+- `lib/widgets/recipe_card.dart` - Recipe card with animation
+- `lib/widgets/ingredient_item.dart` - Ingredient display widget
+- `lib/widgets/direction_step.dart` - Direction step widget
+- `lib/widgets/loading_skeleton.dart` - Shimmer loading placeholders
+- `lib/widgets/empty_state.dart` - Empty state display
+- `lib/widgets/error_state.dart` - Error state display
+- `lib/widgets/processing_job_card.dart` - Processing job card
+- `lib/widgets/widgets.dart` - Barrel export file
+
+**Provider:**
+- `lib/providers/recipe_provider.dart` - Recipe state management
+
+**Updated Screens:**
+- `lib/screens/home_screen.dart` - Full rewrite with responsive grid, search, processing jobs
+- `lib/screens/recipe_detail_screen.dart` - Added cooking mode, share, better styling
+- `lib/screens/recipe_edit_screen.dart` - Better UX, proper controller management
+
+**Updated Core:**
+- `lib/main.dart` - Added RecipeProvider to providers list
+
+**Tests:**
+- `test/widgets/widgets_test.dart` - Widget tests for all new components
+
+### Deferred Items
+
+- None - all Sprint 4 features are complete
+
+### Technical Notes
+
+- Uses Provider package (already a dependency) for state management
+- Material 3 design system with ColorScheme tokens throughout
+- Responsive layouts using LayoutBuilder and SliverLayoutBuilder
+- Hero animations for smooth transitions between home and detail
+- Proper TextEditingController lifecycle management
+- Dark mode automatically supported via ThemeMode.system
+- All widgets follow accessibility best practices
+
+### Next Steps
+
+Sprint 5 will focus on export features and cloud sync (iCloud Drive, Google Drive).

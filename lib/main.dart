@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/recipe_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/background_processing_service.dart';
 import 'services/database_service.dart';
@@ -20,7 +21,12 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [Provider<DatabaseService>.value(value: databaseService)],
+      providers: [
+        Provider<DatabaseService>.value(value: databaseService),
+        ChangeNotifierProvider(
+          create: (_) => RecipeProvider(databaseService),
+        ),
+      ],
       child: const RecipeRipperApp(),
     ),
   );
