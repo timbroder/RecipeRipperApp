@@ -175,4 +175,19 @@ class RecipeProvider extends ChangeNotifier {
     _processingJobs.removeWhere((j) => j.id == jobId);
     notifyListeners();
   }
+
+  /// Clears all recipes and processing jobs.
+  Future<bool> clearAllRecipes() async {
+    try {
+      await _databaseService.clearAllData();
+      _recipes.clear();
+      _processingJobs.clear();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to clear data: $e';
+      notifyListeners();
+      return false;
+    }
+  }
 }

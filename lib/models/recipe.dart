@@ -99,8 +99,12 @@ class Recipe {
       sourceUrl: json['sourceUrl'] as String?,
       sourcePlatform: json['sourcePlatform'] as String?,
       thumbnailPath: json['thumbnailPath'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
       ingredients: (json['ingredients'] as List<dynamic>?)
               ?.map((i) => Ingredient.fromJson(i as Map<String, dynamic>))
               .toList() ??
