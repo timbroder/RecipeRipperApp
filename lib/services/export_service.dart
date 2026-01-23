@@ -204,7 +204,8 @@ class ExportService {
 
     // Source info
     if (recipe.sourceUrl != null && recipe.sourceUrl!.isNotEmpty) {
-      buffer.writeln('**Source:** [${recipe.sourcePlatform ?? 'Link'}](${recipe.sourceUrl})');
+      buffer.writeln(
+          '**Source:** [${recipe.sourcePlatform ?? 'Link'}](${recipe.sourceUrl})');
       buffer.writeln();
     }
 

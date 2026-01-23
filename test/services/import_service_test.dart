@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recipe_ripper/models/recipe.dart';
-import 'package:recipe_ripper/models/ingredient.dart';
-import 'package:recipe_ripper/models/direction.dart';
 import 'package:recipe_ripper/services/import_service.dart';
 
 void main() {
@@ -121,6 +118,7 @@ void main() {
 
   group('ImportService Markdown parsing', () {
     test('parses simple markdown recipe', () {
+      // Example markdown format that would be parsed
       const markdown = '''
 # Chocolate Chip Cookies
 
@@ -134,6 +132,11 @@ void main() {
 2. Add butter and stir.
 3. Bake at 375°F for 12 minutes.
 ''';
+
+      // Verify the markdown contains expected structure
+      expect(markdown, contains('# Chocolate Chip Cookies'));
+      expect(markdown, contains('## Ingredients'));
+      expect(markdown, contains('## Directions'));
 
       // Since _parseMarkdown is private, we'll test the line parsing logic
       // through the ingredient and direction parsing
@@ -356,8 +359,7 @@ void main() {
       for (final unit in units) {
         final testString = '$unit flour';
         final match = unitPattern.firstMatch(testString);
-        expect(match, isNotNull,
-            reason: 'Unit "$unit" should be recognized');
+        expect(match, isNotNull, reason: 'Unit "$unit" should be recognized');
       }
     });
   });

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/recipe.dart';
 import '../providers/recipe_provider.dart';
 import '../providers/sync_provider.dart';
@@ -233,6 +232,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Future<void> _showExportDialog() async {
+    final syncProvider = context.read<SyncProvider>();
+
     final format = await showDialog<ExportFormat>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -261,7 +262,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     if (format == null) return;
 
     try {
-      final syncProvider = context.read<SyncProvider>();
       final result = await syncProvider.exportService.exportAndShareRecipe(
         _recipe,
         format,

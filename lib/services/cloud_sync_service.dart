@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
-import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/recipe.dart';
@@ -126,14 +125,13 @@ class ICloudSyncService extends CloudSyncService {
   static const _prefsKeyEnabled = 'icloud_sync_enabled';
   static const _prefsKeyLastSync = 'icloud_last_sync';
 
-  final DatabaseService _databaseService;
   final ExportService _exportService;
   final ImportService _importService;
 
   SyncStatus _status = SyncStatus.idle;
 
   ICloudSyncService(
-    this._databaseService,
+    DatabaseService databaseService,
     this._exportService,
     this._importService,
   );
@@ -312,7 +310,6 @@ class GoogleDriveSyncService extends CloudSyncService {
 
   final DatabaseService _databaseService;
   final ExportService _exportService;
-  final ImportService _importService;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [drive.DriveApi.driveFileScope],
@@ -324,7 +321,7 @@ class GoogleDriveSyncService extends CloudSyncService {
   GoogleDriveSyncService(
     this._databaseService,
     this._exportService,
-    this._importService,
+    ImportService importService,
   );
 
   @override
@@ -510,10 +507,9 @@ class GoogleDriveSyncService extends CloudSyncService {
   Future<String?> _getOrCreateFolder() async {
     try {
       // Search for existing folder
-      final query =
+      const query =
           "name='$_folderName' and mimeType='application/vnd.google-apps.folder' and trashed=false";
-      final fileList =
-          await _driveApi!.files.list(q: query, spaces: 'drive');
+      final fileList = await _driveApi!.files.list(q: query, spaces: 'drive');
 
       if (fileList.files != null && fileList.files!.isNotEmpty) {
         return fileList.files!.first.id;
@@ -534,9 +530,9 @@ class GoogleDriveSyncService extends CloudSyncService {
 
   Future<List<Recipe>> _downloadRecipes(String folderId) async {
     try {
-      final query = "name='$_fileName' and '$folderId' in parents and trashed=false";
-      final fileList =
-          await _driveApi!.files.list(q: query, spaces: 'drive');
+      final query =
+          "name='$_fileName' and '$folderId' in parents and trashed=false";
+      final fileList = await _driveApi!.files.list(q: query, spaces: 'drive');
 
       if (fileList.files == null || fileList.files!.isEmpty) {
         return [];
@@ -570,9 +566,9 @@ class GoogleDriveSyncService extends CloudSyncService {
   Future<void> _uploadRecipes(String folderId, String content) async {
     try {
       // Check if file exists
-      final query = "name='$_fileName' and '$folderId' in parents and trashed=false";
-      final fileList =
-          await _driveApi!.files.list(q: query, spaces: 'drive');
+      final query =
+          "name='$_fileName' and '$folderId' in parents and trashed=false";
+      final fileList = await _driveApi!.files.list(q: query, spaces: 'drive');
 
       final media = drive.Media(
         Stream.value(utf8.encode(content)),

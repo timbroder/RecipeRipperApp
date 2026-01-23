@@ -110,7 +110,8 @@ void main() {
       });
 
       test('recipe JSON can be re-parsed', () {
-        final jsonStr = const JsonEncoder.withIndent('  ').convert(testRecipe.toJson());
+        final jsonStr =
+            const JsonEncoder.withIndent('  ').convert(testRecipe.toJson());
         final parsed = json.decode(jsonStr) as Map<String, dynamic>;
         final restored = Recipe.fromJson(parsed);
 
@@ -127,11 +128,13 @@ void main() {
         // but we can test the Recipe's toDisplayString methods
         expect(testRecipe.ingredients[0].toDisplayString(), '2 cups flour');
         expect(testRecipe.ingredients[1].toDisplayString(), '1 teaspoon salt');
-        expect(testRecipe.ingredients[2].toDisplayString(), '0.5 cup sugar (optional)');
+        expect(testRecipe.ingredients[2].toDisplayString(),
+            '0.5 cup sugar (optional)');
       });
 
       test('direction displays with step number', () {
-        expect(testRecipe.directions[0].toDisplayString(), '1. Mix dry ingredients.');
+        expect(testRecipe.directions[0].toDisplayString(),
+            '1. Mix dry ingredients.');
       });
     });
 

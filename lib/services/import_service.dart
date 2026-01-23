@@ -217,8 +217,7 @@ class ImportService {
 
       // Parse directions
       final directions = <Direction>[];
-      final directionsList =
-          json['directions'] as List<dynamic>? ??
+      final directionsList = json['directions'] as List<dynamic>? ??
           json['steps'] as List<dynamic>? ??
           json['instructions'] as List<dynamic>? ??
           <dynamic>[];
@@ -229,9 +228,8 @@ class ImportService {
             stepNumber: item['stepNumber'] as int? ??
                 item['step_number'] as int? ??
                 i + 1,
-            text: item['text'] as String? ??
-                item['instruction'] as String? ??
-                '',
+            text:
+                item['text'] as String? ?? item['instruction'] as String? ?? '',
           ));
         } else if (item is String) {
           directions.add(Direction(stepNumber: i + 1, text: item));
@@ -240,7 +238,8 @@ class ImportService {
 
       return Recipe(
         title: title,
-        sourceUrl: json['sourceUrl'] as String? ?? json['source_url'] as String?,
+        sourceUrl:
+            json['sourceUrl'] as String? ?? json['source_url'] as String?,
         sourcePlatform: json['sourcePlatform'] as String? ??
             json['source_platform'] as String?,
         ingredients: ingredients,

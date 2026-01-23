@@ -341,7 +341,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Refresh recipes
         Provider.of<RecipeProvider>(context, listen: false).refresh();
       } else {
-        _showSnackBar('Sync failed: ${result.errors.firstOrNull ?? "Unknown error"}');
+        _showSnackBar(
+            'Sync failed: ${result.errors.firstOrNull ?? "Unknown error"}');
       }
     }
   }
@@ -510,6 +511,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Clear Data
 
   Future<void> _showClearDataDialog() async {
+    final recipeProvider =
+        Provider.of<RecipeProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -536,8 +540,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       try {
-        final recipeProvider =
-            Provider.of<RecipeProvider>(context, listen: false);
         await recipeProvider.clearAllRecipes();
         _showSnackBar('All data cleared');
         _calculateStorageUsage();
