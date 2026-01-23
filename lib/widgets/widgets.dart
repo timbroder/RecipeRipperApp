@@ -1,6 +1,7 @@
 /// Widget library for Recipe Ripper app.
 ///
 /// This file exports all reusable widgets for easy importing.
+library;
 
 export 'recipe_card.dart';
 export 'ingredient_item.dart';

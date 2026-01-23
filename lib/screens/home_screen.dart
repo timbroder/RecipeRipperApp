@@ -76,7 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(77),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withAlpha(77),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -84,8 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 'Add Recipe',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               ListTile(
@@ -257,8 +260,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: provider.searchQuery != null
-                        ? EmptyState.noSearchResults(query: provider.searchQuery)
-                        : EmptyState.noRecipes(onAddRecipe: _showAddRecipeOptions),
+                        ? EmptyState.noSearchResults(
+                            query: provider.searchQuery)
+                        : EmptyState.noRecipes(
+                            onAddRecipe: _showAddRecipeOptions),
                   )
                 else
                   _buildRecipeGrid(provider),
@@ -357,15 +362,15 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 'Processing',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const Spacer(),
               Text(
                 '${provider.activeJobs.length} active',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
@@ -396,7 +401,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRecipeGrid(RecipeProvider provider) {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = _calculateCrossAxisCount(constraints.crossAxisExtent);
+        final crossAxisCount =
+            _calculateCrossAxisCount(constraints.crossAxisExtent);
         return SliverPadding(
           padding: const EdgeInsets.all(12),
           sliver: SliverGrid(
@@ -455,7 +461,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(77),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withAlpha(77),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

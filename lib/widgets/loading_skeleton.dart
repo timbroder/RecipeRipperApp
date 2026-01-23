@@ -207,8 +207,7 @@ class RecipeDetailSkeleton extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SkeletonBox(
-                                    width: double.infinity, height: 16),
+                                SkeletonBox(width: double.infinity, height: 16),
                                 SizedBox(height: 4),
                                 SkeletonBox(width: 200, height: 16),
                               ],

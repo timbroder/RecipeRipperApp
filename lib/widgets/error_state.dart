@@ -42,7 +42,8 @@ class ErrorState extends StatelessWidget {
   }
 
   /// Creates an error state for processing failures.
-  factory ErrorState.processingFailed({String? details, VoidCallback? onRetry}) {
+  factory ErrorState.processingFailed(
+      {String? details, VoidCallback? onRetry}) {
     return ErrorState(
       title: 'Processing Failed',
       message: details ?? 'There was an error processing the video',
@@ -53,7 +54,8 @@ class ErrorState extends StatelessWidget {
   }
 
   /// Creates an error state for permission denied.
-  factory ErrorState.permissionDenied({String? permission, VoidCallback? onRetry}) {
+  factory ErrorState.permissionDenied(
+      {String? permission, VoidCallback? onRetry}) {
     return ErrorState(
       title: 'Permission Required',
       message: permission != null

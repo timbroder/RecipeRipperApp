@@ -297,8 +297,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Widget _buildThumbnail() {
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (_recipe.thumbnailPath != null) {
       final file = File(_recipe.thumbnailPath!);
       if (file.existsSync()) {

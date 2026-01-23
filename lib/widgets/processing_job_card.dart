@@ -173,7 +173,9 @@ class ProcessingJobCard extends StatelessWidget {
       // Extract video title or URL hostname
       final uri = Uri.tryParse(job.sourceUrl!);
       if (uri != null) {
-        return uri.host.isNotEmpty ? 'Video from ${uri.host}' : 'Processing Video';
+        return uri.host.isNotEmpty
+            ? 'Video from ${uri.host}'
+            : 'Processing Video';
       }
     }
     return 'Processing Video';

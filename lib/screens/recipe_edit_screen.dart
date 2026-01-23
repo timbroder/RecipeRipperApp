@@ -4,7 +4,6 @@ import '../models/recipe.dart';
 import '../models/ingredient.dart';
 import '../models/direction.dart';
 import '../providers/recipe_provider.dart';
-import '../widgets/widgets.dart';
 
 class RecipeEditScreen extends StatefulWidget {
   final Recipe recipe;
@@ -26,14 +25,18 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.recipe.title);
-    _ingredients = widget.recipe.ingredients.map((i) => _IngredientEditItem(
-      ingredient: i,
-      controller: TextEditingController(text: i.toDisplayString()),
-    )).toList();
-    _directions = widget.recipe.directions.map((d) => _DirectionEditItem(
-      direction: d,
-      controller: TextEditingController(text: d.text),
-    )).toList();
+    _ingredients = widget.recipe.ingredients
+        .map((i) => _IngredientEditItem(
+              ingredient: i,
+              controller: TextEditingController(text: i.toDisplayString()),
+            ))
+        .toList();
+    _directions = widget.recipe.directions
+        .map((d) => _DirectionEditItem(
+              direction: d,
+              controller: TextEditingController(text: d.text),
+            ))
+        .toList();
 
     _titleController.addListener(_markChanged);
   }
@@ -276,8 +279,8 @@ class _RecipeEditScreenState extends State<RecipeEditScreen> {
                 Text(
                   'Recipe Title',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),

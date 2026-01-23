@@ -180,8 +180,7 @@ class DirectionCard extends StatelessWidget {
                 child: Text(
                   direction.text,
                   style: textTheme.bodyMedium?.copyWith(
-                    decoration:
-                        isCompleted ? TextDecoration.lineThrough : null,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
                     color: isCompleted
                         ? colorScheme.onSurface.withAlpha(128)
                         : colorScheme.onSurface,

@@ -91,7 +91,8 @@ class _RecipeCardState extends State<RecipeCard>
             Expanded(
               flex: 3,
               child: Hero(
-                tag: 'recipe_thumbnail_${widget.recipe.id ?? widget.recipe.title}',
+                tag:
+                    'recipe_thumbnail_${widget.recipe.id ?? widget.recipe.title}',
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -192,8 +193,6 @@ class _RecipeCardState extends State<RecipeCard>
   }
 
   Widget _buildThumbnail(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (widget.recipe.thumbnailPath != null) {
       final file = File(widget.recipe.thumbnailPath!);
       if (file.existsSync()) {
