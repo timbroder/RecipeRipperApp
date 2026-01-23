@@ -13,6 +13,7 @@
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		AABBCC001234567800112233 /* SpeechRecognitionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC011234567800112233 /* SpeechRecognitionBridge.swift */; };
 		AABBCC021234567800112233 /* VisionOcrBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC031234567800112233 /* VisionOcrBridge.swift */; };
+		AABBCC041234567800112233 /* BackgroundTaskBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC051234567800112233 /* BackgroundTaskBridge.swift */; };
 		762671C0A4516154E23AB900 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E1132A78916B88749A9C26F1 /* Pods_Runner.framework */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -55,6 +56,7 @@
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AABBCC011234567800112233 /* SpeechRecognitionBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionBridge.swift; sourceTree = "<group>"; };
 		AABBCC031234567800112233 /* VisionOcrBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VisionOcrBridge.swift; sourceTree = "<group>"; };
+		AABBCC051234567800112233 /* BackgroundTaskBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackgroundTaskBridge.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		8CCC0B6150BED8BFF588E79B /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				AABBCC011234567800112233 /* SpeechRecognitionBridge.swift */,
 				AABBCC031234567800112233 /* VisionOcrBridge.swift */,
+				AABBCC051234567800112233 /* BackgroundTaskBridge.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -387,6 +390,7 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				AABBCC001234567800112233 /* SpeechRecognitionBridge.swift in Sources */,
 				AABBCC021234567800112233 /* VisionOcrBridge.swift in Sources */,
+				AABBCC041234567800112233 /* BackgroundTaskBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
