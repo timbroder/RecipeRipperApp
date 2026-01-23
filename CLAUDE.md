@@ -331,8 +331,8 @@ Check the original Python implementation for parsing logic reference:
 
 ---
 
-**Last Updated**: 2026-01-19
-**Current Phase**: Sprint 2 Complete - Ready for Sprint 3
+**Last Updated**: 2026-01-23
+**Current Phase**: Sprint 3 Complete - Ready for Sprint 4
 
 ## Sprint 1 Completion Summary
 
@@ -483,3 +483,84 @@ Sprint 2 focused on implementing the on-device ML processing pipeline for extrac
   - iOS: BGTaskScheduler with processing task for background execution
 - When the app is backgrounded, processing automatically switches to background mode
 - Job status is polled when the app returns to foreground to update UI
+
+## Sprint 3 Completion Summary
+
+Sprint 3 focused on recipe parsing and storage - converting raw transcript and OCR text into structured recipes with ingredients and directions.
+
+### Features Implemented
+
+1. **Parsing Utilities**:
+   - Unit normalization (40+ abbreviations: tbsp→tablespoon, tsp→teaspoon, etc.)
+   - Fraction parsing (unicode: ½, ¼; slash: 1/2; mixed: 1 1/2)
+   - Quantity parsing (handles ranges like "1-2 cups")
+   - Text cleaning (removes OCR artifacts, normalizes whitespace)
+   - String similarity calculation for deduplication
+   - Temperature and time duration extraction
+
+2. **Classification System**:
+   - Ingredient classifier with confidence scoring (0.0-1.0)
+   - 60+ ingredient keywords (flour, sugar, salt, butter, etc.)
+   - Direction classifier with 70+ cooking verbs (mix, bake, stir, etc.)
+   - Pattern detection (quantities, units, temperatures, times)
+   - Heuristic-based classification (no ML required)
+
+3. **Text Processing**:
+   - Text splitter combines transcript + OCR with deduplication
+   - Section detection (ingredients vs directions)
+   - Context-aware classification with section bias
+   - Title extraction from video metadata or text content
+   - Handles ambiguous lines intelligently
+
+4. **Deduplication**:
+   - Ingredient deduplication with quantity merging
+   - Direction deduplication (removes redundant steps)
+   - Similarity-based matching (Jaccard index)
+   - Smart merging by item name and unit
+
+5. **Recipe Parsing Service**:
+   - End-to-end orchestration of parsing pipeline
+   - Combines all utilities and classifiers
+   - Generates structured Recipe objects
+   - Recipe validation with warnings
+   - Parsing statistics for quality assessment
+   - Integrated into ProcessingService
+
+### Files Added/Modified
+
+**Utilities:**
+- `lib/utils/parsing_utils.dart` - Core parsing utilities
+- `lib/utils/ingredient_classifier.dart` - Ingredient classification and parsing
+- `lib/utils/direction_classifier.dart` - Direction classification and cleaning
+- `lib/utils/text_splitter.dart` - Text section splitting
+- `lib/utils/deduplicator.dart` - Deduplication logic
+
+**Services:**
+- `lib/services/recipe_parsing_service.dart` - Main parsing orchestrator
+- `lib/services/processing_service.dart` - Updated to integrate recipe parsing
+
+**Tests:**
+- `test/utils/parsing_utils_test.dart` - 70+ utility function tests
+- `test/utils/ingredient_classifier_test.dart` - 15+ ingredient classification tests
+- `test/utils/direction_classifier_test.dart` - 15+ direction classification tests
+- `test/services/recipe_parsing_service_test.dart` - 10+ integration tests
+
+**Documentation:**
+- `PROJECT_PLAN.md` - Updated with Sprint 3 completion details
+
+### Deferred Items
+
+- None - all Sprint 3 features are complete
+
+### Technical Notes
+
+- Parsing uses heuristic-based classification (no ML required)
+- Confidence scoring allows for tunable thresholds
+- Handles various formats: fractions, ranges, abbreviations, OCR artifacts
+- Deduplication prevents redundant ingredients/directions from transcript + OCR overlap
+- All parsing is done on-device with no external dependencies
+- Test coverage: >90% on all parsing logic
+
+### Next Steps
+
+Sprint 4 will focus on building the recipe viewing and editing UI.
