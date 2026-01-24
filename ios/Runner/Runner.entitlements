@@ -15,5 +15,10 @@
 	<array>
 		<string>iCloud.com.reciperipperapp</string>
 	</array>
+	<!-- App Groups for Share Extension communication -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.reciperipperapp</string>
+	</array>
 </dict>
 </plist>
