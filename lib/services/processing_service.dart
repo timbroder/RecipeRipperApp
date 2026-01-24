@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/processing_job.dart';
 import '../models/recipe.dart';
 import 'audio_extraction_service.dart';
+import 'confidence_calculator_service.dart';
 import 'database_service.dart';
 import 'frame_extraction_service.dart';
 import 'ocr_service.dart';
@@ -203,7 +204,7 @@ class ProcessingService {
 
       // Use RecipeParsingService to parse the recipe
       final videoFileName = path.basenameWithoutExtension(videoPath);
-      final recipe = await RecipeParsingService.parseRecipe(
+      var recipe = await RecipeParsingService.parseRecipe(
         transcript: transcript,
         ocrText: ocrText,
         videoTitle: videoFileName,
@@ -215,6 +216,15 @@ class ProcessingService {
           processingTimeSeconds: processingTimeSeconds,
           frameCount: framePaths.length,
         ),
+      );
+
+      // Calculate confidence score
+      final confidenceScore = ConfidenceCalculatorService.calculate(recipe);
+
+      // Update recipe with confidence score
+      recipe = recipe.copyWith(
+        metadata: recipe.metadata?.copyWith(confidenceScore: confidenceScore) ??
+            RecipeMetadata(confidenceScore: confidenceScore),
       );
 
       // Save recipe to database

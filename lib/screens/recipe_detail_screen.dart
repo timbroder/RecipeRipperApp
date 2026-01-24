@@ -706,6 +706,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         children: [
           const Divider(),
           const SizedBox(height: 8),
+          // Confidence Score Section
+          if (metadata.confidenceScore != null) ...[
+            Text(
+              'Extraction Quality',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface.withAlpha(179),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ConfidenceIndicator(
+              confidenceScore: metadata.confidenceScore!,
+              showExplanation: true,
+            ),
+            const SizedBox(height: 24),
+          ],
           Text(
             'Processing Info',
             style: textTheme.titleMedium?.copyWith(

@@ -10,3 +10,4 @@ export 'loading_skeleton.dart';
 export 'empty_state.dart';
 export 'error_state.dart';
 export 'processing_job_card.dart';
+export 'confidence_indicator.dart';

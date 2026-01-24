@@ -1,5 +1,6 @@
 import 'ingredient.dart';
 import 'direction.dart';
+import 'confidence_score.dart';
 
 class Recipe {
   final String? id;
@@ -126,6 +127,7 @@ class RecipeMetadata {
   final int? processingTimeSeconds;
   final String? videoDuration;
   final int? frameCount;
+  final ConfidenceScore? confidenceScore;
 
   RecipeMetadata({
     this.transcript,
@@ -133,6 +135,7 @@ class RecipeMetadata {
     this.processingTimeSeconds,
     this.videoDuration,
     this.frameCount,
+    this.confidenceScore,
   });
 
   Map<String, dynamic> toMap() {
@@ -142,6 +145,7 @@ class RecipeMetadata {
       'processing_time_seconds': processingTimeSeconds,
       'video_duration': videoDuration,
       'frame_count': frameCount,
+      'confidence_score': confidenceScore?.toJson(),
     };
   }
 
@@ -152,6 +156,10 @@ class RecipeMetadata {
       processingTimeSeconds: map['processing_time_seconds'] as int?,
       videoDuration: map['video_duration'] as String?,
       frameCount: map['frame_count'] as int?,
+      confidenceScore: map['confidence_score'] != null
+          ? ConfidenceScore.fromJson(
+              map['confidence_score'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -162,6 +170,7 @@ class RecipeMetadata {
       'processingTimeSeconds': processingTimeSeconds,
       'videoDuration': videoDuration,
       'frameCount': frameCount,
+      'confidenceScore': confidenceScore?.toJson(),
     };
   }
 
@@ -172,6 +181,30 @@ class RecipeMetadata {
       processingTimeSeconds: json['processingTimeSeconds'] as int?,
       videoDuration: json['videoDuration'] as String?,
       frameCount: json['frameCount'] as int?,
+      confidenceScore: json['confidenceScore'] != null
+          ? ConfidenceScore.fromJson(
+              json['confidenceScore'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  /// Create a copy with updated fields
+  RecipeMetadata copyWith({
+    String? transcript,
+    String? ocrText,
+    int? processingTimeSeconds,
+    String? videoDuration,
+    int? frameCount,
+    ConfidenceScore? confidenceScore,
+  }) {
+    return RecipeMetadata(
+      transcript: transcript ?? this.transcript,
+      ocrText: ocrText ?? this.ocrText,
+      processingTimeSeconds:
+          processingTimeSeconds ?? this.processingTimeSeconds,
+      videoDuration: videoDuration ?? this.videoDuration,
+      frameCount: frameCount ?? this.frameCount,
+      confidenceScore: confidenceScore ?? this.confidenceScore,
     );
   }
 }
