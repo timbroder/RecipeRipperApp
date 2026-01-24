@@ -6,6 +6,11 @@
 *.swp
 .buildlog/
 .history
+.metadata
+
+# IDE
+.idea/
+*.iml
 
 
 
