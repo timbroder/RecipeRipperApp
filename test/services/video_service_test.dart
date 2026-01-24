@@ -40,6 +40,85 @@ void main() {
       });
     });
 
+    group('Supported Platform Detection', () {
+      test('should return true for YouTube URLs', () {
+        expect(
+          videoService
+              .isSupportedPlatform('https://www.youtube.com/watch?v=abc'),
+          isTrue,
+        );
+        expect(
+          videoService.isSupportedPlatform('https://youtu.be/abc'),
+          isTrue,
+        );
+      });
+
+      test('should return true for Instagram URLs', () {
+        expect(
+          videoService
+              .isSupportedPlatform('https://www.instagram.com/reel/abc'),
+          isTrue,
+        );
+      });
+
+      test('should return true for TikTok URLs', () {
+        expect(
+          videoService
+              .isSupportedPlatform('https://www.tiktok.com/@user/video/123'),
+          isTrue,
+        );
+      });
+
+      test('should return false for unsupported platforms', () {
+        expect(
+          videoService.isSupportedPlatform('https://vimeo.com/123'),
+          isFalse,
+        );
+        expect(
+          videoService
+              .isSupportedPlatform('https://dailymotion.com/video/x123'),
+          isFalse,
+        );
+        expect(
+          videoService.isSupportedPlatform('https://twitter.com/status/123'),
+          isFalse,
+        );
+        expect(
+          videoService.isSupportedPlatform('https://example.com/video.mp4'),
+          isFalse,
+        );
+      });
+    });
+
+    group('Platform Name Detection', () {
+      test('should return correct platform name for supported platforms', () {
+        expect(
+          videoService.getPlatformName('https://www.youtube.com/watch?v=abc'),
+          equals('YouTube'),
+        );
+        expect(
+          videoService.getPlatformName('https://www.instagram.com/reel/abc'),
+          equals('Instagram'),
+        );
+        expect(
+          videoService
+              .getPlatformName('https://www.tiktok.com/@user/video/123'),
+          equals('TikTok'),
+        );
+      });
+
+      test('should return null for unsupported platforms', () {
+        expect(
+          videoService.getPlatformName('https://vimeo.com/123'),
+          isNull,
+        );
+        expect(
+          videoService.getPlatformName('https://example.com/video.mp4'),
+          isNull,
+        );
+      });
+    });
+
     group('URL Type Detection', () {
       test('should detect YouTube URLs', () {
         expect(
@@ -58,18 +137,25 @@ void main() {
         );
       });
 
-      test('should detect Vimeo URLs', () {
+      test('should detect Instagram URLs', () {
         expect(
-          videoService.detectUrlType('https://vimeo.com/123456789'),
-          equals('vimeo'),
+          videoService.detectUrlType('https://www.instagram.com/reel/abc123'),
+          equals('instagram'),
+        );
+        expect(
+          videoService.detectUrlType('https://instagram.com/p/xyz789'),
+          equals('instagram'),
         );
       });
 
-      test('should detect Dailymotion URLs', () {
+      test('should detect TikTok URLs', () {
         expect(
-          videoService
-              .detectUrlType('https://www.dailymotion.com/video/x123456'),
-          equals('dailymotion'),
+          videoService.detectUrlType('https://www.tiktok.com/@user/video/123'),
+          equals('tiktok'),
+        );
+        expect(
+          videoService.detectUrlType('https://tiktok.com/@chef/video/456'),
+          equals('tiktok'),
         );
       });
 

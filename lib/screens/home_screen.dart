@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onUrlReceived: (url) {
         // Handle the shared URL
         if (mounted) {
-          _openVideoPreview(VideoSource.url(url));
+          _handleSharedUrl(url);
         }
       },
     );
@@ -56,9 +56,38 @@ class _HomeScreenState extends State<HomeScreen> {
     // Check if there was a shared URL when the app was launched
     _shareHandlerService.getInitialSharedUrl().then((url) {
       if (url != null && mounted) {
-        _openVideoPreview(VideoSource.url(url));
+        _handleSharedUrl(url);
       }
     });
+  }
+
+  /// Validates and handles a shared URL
+  void _handleSharedUrl(String url) {
+    // Check if it's a supported platform
+    if (!_videoService.isSupportedPlatform(url)) {
+      _showUnsupportedPlatformError();
+      return;
+    }
+    _openVideoPreview(VideoSource.url(url));
+  }
+
+  /// Shows error dialog for unsupported platforms
+  void _showUnsupportedPlatformError() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unsupported Platform'),
+        content: const Text(
+          'Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadData() async {
@@ -108,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 title: const Text('Enter Video URL'),
-                subtitle: const Text('YouTube or direct video link'),
+                subtitle: const Text('YouTube, Instagram, or TikTok'),
                 onTap: () {
                   Navigator.pop(context);
                   _showUrlInputDialog();
@@ -144,38 +173,74 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Shows dialog to input video URL
   void _showUrlInputDialog() {
     final urlController = TextEditingController();
+    String? errorText;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Enter Video URL'),
-          content: TextField(
-            controller: urlController,
-            decoration: const InputDecoration(
-              hintText: 'https://youtube.com/watch?v=...',
-              prefixIcon: Icon(Icons.link),
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.url,
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final url = urlController.text.trim();
-                Navigator.pop(context);
-                if (url.isNotEmpty) {
-                  _openVideoPreview(VideoSource.url(url));
-                }
-              },
-              child: const Text('Continue'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Enter Video URL'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: urlController,
+                    decoration: InputDecoration(
+                      hintText: 'Paste video link here...',
+                      prefixIcon: const Icon(Icons.link),
+                      border: const OutlineInputBorder(),
+                      errorText: errorText,
+                    ),
+                    keyboardType: TextInputType.url,
+                    autofocus: true,
+                    onChanged: (_) {
+                      if (errorText != null) {
+                        setDialogState(() => errorText = null);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Supported: YouTube, Instagram, TikTok',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final url = urlController.text.trim();
+                    if (url.isEmpty) {
+                      setDialogState(() => errorText = 'Please enter a URL');
+                      return;
+                    }
+                    if (!_videoService.isValidUrl(url)) {
+                      setDialogState(
+                          () => errorText = 'Please enter a valid URL');
+                      return;
+                    }
+                    if (!_videoService.isSupportedPlatform(url)) {
+                      setDialogState(() => errorText =
+                          'Only YouTube, Instagram, and TikTok are supported');
+                      return;
+                    }
+                    Navigator.pop(context);
+                    _openVideoPreview(VideoSource.url(url));
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

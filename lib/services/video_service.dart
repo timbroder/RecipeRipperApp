@@ -93,6 +93,9 @@ class VideoService {
   final Dio _dio = Dio();
   final YoutubeExplode _youtubeExplode = YoutubeExplode();
 
+  /// List of supported video platforms
+  static const supportedPlatforms = ['YouTube', 'Instagram', 'TikTok'];
+
   /// Validates if a string is a valid video URL
   bool isValidUrl(String url) {
     try {
@@ -103,17 +106,51 @@ class VideoService {
     }
   }
 
-  /// Detects the type of video URL (YouTube, direct, etc.)
+  /// Checks if a URL is from a supported platform (YouTube, Instagram, TikTok)
+  bool isSupportedPlatform(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+
+      return host.contains('youtube.com') ||
+          host.contains('youtu.be') ||
+          host.contains('instagram.com') ||
+          host.contains('tiktok.com');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Returns the platform name for a URL, or null if unsupported
+  String? getPlatformName(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+
+      if (host.contains('youtube.com') || host.contains('youtu.be')) {
+        return 'YouTube';
+      } else if (host.contains('instagram.com')) {
+        return 'Instagram';
+      } else if (host.contains('tiktok.com')) {
+        return 'TikTok';
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Detects the type of video URL (YouTube, Instagram, TikTok, direct, etc.)
   String detectUrlType(String url) {
     final uri = Uri.parse(url);
     final host = uri.host.toLowerCase();
 
     if (host.contains('youtube.com') || host.contains('youtu.be')) {
       return 'youtube';
-    } else if (host.contains('vimeo.com')) {
-      return 'vimeo';
-    } else if (host.contains('dailymotion.com')) {
-      return 'dailymotion';
+    } else if (host.contains('instagram.com')) {
+      return 'instagram';
+    } else if (host.contains('tiktok.com')) {
+      return 'tiktok';
     } else if (url.endsWith('.mp4') ||
         url.endsWith('.mov') ||
         url.endsWith('.avi') ||
@@ -147,20 +184,32 @@ class VideoService {
   }
 
   /// Downloads a video from a URL
+  /// Only supports YouTube, Instagram, and TikTok URLs
   Future<String> downloadVideo(
     String url, {
     ProgressCallback? onProgress,
   }) async {
+    // Validate supported platform first
+    if (!isSupportedPlatform(url)) {
+      throw VideoException(
+        'Unsupported platform. Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
+        code: 'UNSUPPORTED_PLATFORM',
+      );
+    }
+
     final urlType = detectUrlType(url);
 
     switch (urlType) {
       case 'youtube':
         return await _downloadYouTubeVideo(url, onProgress: onProgress);
-      case 'direct':
+      case 'instagram':
+      case 'tiktok':
+        // TODO: Implement Instagram/TikTok video download
+        // For now, attempt direct download which may work for some URLs
         return await _downloadDirectVideo(url, onProgress: onProgress);
       default:
         throw VideoException(
-          'Unsupported video platform. Please use YouTube or direct video links.',
+          'Unsupported platform. Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
           code: 'UNSUPPORTED_PLATFORM',
         );
     }
@@ -377,8 +426,13 @@ class VideoService {
     if (sourceUrl != null && sourceUrl.isNotEmpty) {
       try {
         final uri = Uri.parse(sourceUrl);
-        if (uri.host.contains('youtube.com') || uri.host.contains('youtu.be')) {
+        final host = uri.host.toLowerCase();
+        if (host.contains('youtube.com') || host.contains('youtu.be')) {
           return 'YouTube Video';
+        } else if (host.contains('instagram.com')) {
+          return 'Instagram Video';
+        } else if (host.contains('tiktok.com')) {
+          return 'TikTok Video';
         }
         return 'Video from ${uri.host}';
       } catch (e) {
