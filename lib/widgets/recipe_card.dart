@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
+import 'confidence_indicator.dart';
 
 /// A card widget for displaying a recipe in a grid or list.
 /// Features thumbnail, title, source platform, and optional animations.
@@ -90,16 +91,30 @@ class _RecipeCardState extends State<RecipeCard>
             // Thumbnail
             Expanded(
               flex: 3,
-              child: Hero(
-                tag:
-                    'recipe_thumbnail_${widget.recipe.id ?? widget.recipe.title}',
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag:
+                        'recipe_thumbnail_${widget.recipe.id ?? widget.recipe.title}',
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                      ),
+                      child: _buildThumbnail(context),
+                    ),
                   ),
-                  child: _buildThumbnail(context),
-                ),
+                  // Confidence badge overlay
+                  if (widget.recipe.metadata?.confidenceScore != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: ConfidenceBadge(
+                        level: widget.recipe.metadata!.confidenceScore!.level,
+                      ),
+                    ),
+                ],
               ),
             ),
             // Content
