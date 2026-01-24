@@ -153,6 +153,9 @@ class ICloudSyncService extends CloudSyncService {
       return SyncAccount.notSignedIn();
     } on PlatformException {
       return SyncAccount.notSignedIn();
+    } on MissingPluginException {
+      // Platform channel not available (e.g., running on macOS desktop)
+      return SyncAccount.notSignedIn();
     }
   }
 
@@ -163,6 +166,9 @@ class ICloudSyncService extends CloudSyncService {
       final result = await _channel.invokeMethod<bool>('isAvailable');
       return result ?? false;
     } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      // Platform channel not available (e.g., running on macOS desktop)
       return false;
     }
   }
@@ -239,6 +245,9 @@ class ICloudSyncService extends CloudSyncService {
     } on PlatformException catch (e) {
       _status = SyncStatus.error;
       return SyncResult.failure('iCloud sync failed: ${e.message}');
+    } on MissingPluginException {
+      _status = SyncStatus.error;
+      return SyncResult.failure('iCloud not available on this platform');
     } catch (e) {
       _status = SyncStatus.error;
       return SyncResult.failure('Sync failed: $e');
@@ -294,6 +303,9 @@ class ICloudSyncService extends CloudSyncService {
     } on PlatformException catch (e) {
       _status = SyncStatus.error;
       return SyncResult.failure('iCloud download failed: ${e.message}');
+    } on MissingPluginException {
+      _status = SyncStatus.error;
+      return SyncResult.failure('iCloud not available on this platform');
     } catch (e) {
       _status = SyncStatus.error;
       return SyncResult.failure('Download failed: $e');
@@ -305,7 +317,7 @@ class ICloudSyncService extends CloudSyncService {
 class GoogleDriveSyncService extends CloudSyncService {
   static const _prefsKeyEnabled = 'gdrive_sync_enabled';
   static const _prefsKeyLastSync = 'gdrive_last_sync';
-  static const _folderName = 'RecipeRipper';
+  static const _folderName = 'Recipe Slurp';
   static const _fileName = 'recipes.json';
 
   final DatabaseService _databaseService;

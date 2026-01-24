@@ -1,4 +1,4 @@
-/// Widget library for Recipe Ripper app.
+/// Widget library for Recipe Slurp app.
 ///
 /// This file exports all reusable widgets for easy importing.
 library;

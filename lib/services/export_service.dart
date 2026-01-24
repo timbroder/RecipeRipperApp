@@ -122,7 +122,7 @@ class ExportService {
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'My Recipes Export',
-        text: 'All recipes exported from RecipeRipper',
+        text: 'All recipes exported from Recipe Slurp',
       );
 
       return ExportResult.success(filePath: file.path, content: result.content);
@@ -142,7 +142,7 @@ class ExportService {
       final buffer = StringBuffer();
       buffer.writeln('# My Recipe Collection');
       buffer.writeln();
-      buffer.writeln('*Exported from RecipeRipper*');
+      buffer.writeln('*Exported from Recipe Slurp*');
       buffer.writeln();
       buffer.writeln('---');
       buffer.writeln();
@@ -236,7 +236,7 @@ class ExportService {
     // Metadata footer
     buffer.writeln('---');
     buffer.writeln();
-    buffer.writeln('*Recipe extracted by RecipeRipper*');
+    buffer.writeln('*Recipe extracted by Recipe Slurp*');
 
     return buffer.toString();
   }

@@ -16,7 +16,7 @@
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33"/>
 
     <application
-        android:label="Recipe Ripper"
+        android:label="Recipe Slurp"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
