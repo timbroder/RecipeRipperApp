@@ -3,7 +3,6 @@
 > Extract structured recipes from cooking videos using on-device ML
 
 [![CI](https://github.com/timbroder/RecipeRipperApp/workflows/CI/badge.svg)](https://github.com/timbroder/RecipeRipperApp/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
@@ -177,10 +176,6 @@ Current status: **Sprint 0 Complete** ✅
 ## Privacy
 
 Recipe Ripper processes all video data **on-device**. No video content, audio, or recipe data is sent to external servers (except optional cloud sync in Sprint 5, which uses your personal iCloud/Google Drive).
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
