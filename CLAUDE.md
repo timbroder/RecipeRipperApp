@@ -1,10 +1,10 @@
-# CLAUDE_APP.md - RecipeRipper Mobile
+# CLAUDE.md - Recipe Slurp
 
 This file provides context for AI assistants working on the mobile app version of this project.
 
 ## Project Overview
 
-RecipeRipper Mobile is a Flutter application that extracts structured recipes from cooking videos. It's a mobile conversion of the original Python CLI tool, designed to run entirely on-device using native iOS and Android ML capabilities.
+Recipe Slurp is a Flutter application that extracts structured recipes from cooking videos. It's a mobile conversion of the original Python CLI tool, designed to run entirely on-device using native iOS and Android ML capabilities.
 
 **Original Project**: https://github.com/timbroder/RecipeRipper (Python CLI)
 **Mobile Project**: https://github.com/timbroder/RecipeRipperApp (Flutter)
@@ -248,6 +248,45 @@ See PROJECT_PLAN.md for detailed sprint breakdown (Sprints 0-6, ~14-15 weeks to 
 - Add a "What Was Built" section summarizing deliverables
 - Update the status and version at the bottom of the file
 - Note any deferred items or changes from the original plan
+
+## Git Workflow
+
+**IMPORTANT**: Always use pull requests. Never push directly to main.
+
+### Branch and PR Process
+1. Create a feature branch before making changes:
+   ```bash
+   git checkout -b <type>/<short-description>
+   ```
+   Branch naming conventions:
+   - `feat/` - New features
+   - `fix/` - Bug fixes
+   - `docs/` - Documentation changes
+   - `refactor/` - Code refactoring
+   - `chore/` - Maintenance tasks
+
+2. Make changes and commit with descriptive messages
+
+3. Push the branch and create a PR:
+   ```bash
+   git push -u origin <branch-name>
+   gh pr create --title "..." --body "..."
+   ```
+
+4. Wait for CI checks to pass before merging
+
+5. After PR is merged, delete the branch and pull main:
+   ```bash
+   git checkout main
+   git pull
+   git branch -d <branch-name>
+   ```
+
+### Why PRs?
+- CI runs on every PR to catch issues early
+- Creates a reviewable record of changes
+- Allows for code review before merging
+- Provides a clear history of what changed and why
 
 ## CI/CD Notes
 
