@@ -9,7 +9,7 @@ import '../models/processing_job.dart';
 
 class DatabaseService {
   static const String _databaseName = 'recipe_ripper.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static const String tableRecipes = 'recipes';
   static const String tableIngredients = 'ingredients';
@@ -90,6 +90,9 @@ class DatabaseService {
         processing_time_seconds INTEGER,
         video_duration TEXT,
         frame_count INTEGER,
+        description TEXT,
+        warnings TEXT,
+        processing_method TEXT,
         FOREIGN KEY (recipe_id) REFERENCES $tableRecipes (id) ON DELETE CASCADE
       )
     ''');
@@ -128,7 +131,17 @@ class DatabaseService {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database migrations here in future versions
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE $tableMetadata ADD COLUMN description TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $tableMetadata ADD COLUMN warnings TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $tableMetadata ADD COLUMN processing_method TEXT',
+      );
+    }
   }
 
   // Recipe CRUD operations
@@ -397,11 +410,13 @@ class DatabaseService {
     final db = await database;
     final maps = await db.query(
       tableProcessingJobs,
-      where: 'status IN (?, ?, ?, ?)',
+      where: 'status IN (?, ?, ?, ?, ?, ?)',
       whereArgs: [
         ProcessingStatus.downloading.name,
+        ProcessingStatus.analyzingDescription.name,
         ProcessingStatus.transcribing.name,
         ProcessingStatus.extractingText.name,
+        ProcessingStatus.aiExtracting.name,
         ProcessingStatus.parsing.name,
       ],
       orderBy: 'created_at ASC',

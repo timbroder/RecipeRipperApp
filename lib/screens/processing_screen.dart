@@ -14,12 +14,14 @@ class ProcessingScreen extends StatefulWidget {
   final String videoPath;
   final String? sourceUrl;
   final String? videoTitle;
+  final String? description;
 
   const ProcessingScreen({
     super.key,
     required this.videoPath,
     this.sourceUrl,
     this.videoTitle,
+    this.description,
   });
 
   @override
@@ -153,6 +155,8 @@ class _ProcessingScreenState extends State<ProcessingScreen>
       _jobId = await _processingService.processVideo(
         widget.videoPath,
         sourceUrl: widget.sourceUrl,
+        description: widget.description,
+        videoTitle: widget.videoTitle,
         onProgress: (jobId, status, progress, currentStep) {
           setState(() {
             _currentJob = ProcessingJob(
@@ -245,6 +249,12 @@ class _ProcessingScreenState extends State<ProcessingScreen>
               const SizedBox(height: 48),
 
               // Status message
+              if (_currentJob?.status == ProcessingStatus.analyzingDescription)
+                _buildStatusMessage(
+                  Icons.description,
+                  'Analyzing Description',
+                  'Checking for recipe in video description...',
+                ),
               if (_currentJob?.status == ProcessingStatus.transcribing)
                 _buildStatusMessage(
                   Icons.mic,
@@ -256,6 +266,12 @@ class _ProcessingScreenState extends State<ProcessingScreen>
                   Icons.image_search,
                   'Extracting Text',
                   'Reading on-screen text...',
+                ),
+              if (_currentJob?.status == ProcessingStatus.aiExtracting)
+                _buildStatusMessage(
+                  Icons.auto_awesome,
+                  'AI Extraction',
+                  'Using AI to identify recipe...',
                 ),
               if (_currentJob?.status == ProcessingStatus.parsing)
                 _buildStatusMessage(

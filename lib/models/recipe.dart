@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'ingredient.dart';
 import 'direction.dart';
 import 'confidence_score.dart';
@@ -128,6 +129,9 @@ class RecipeMetadata {
   final String? videoDuration;
   final int? frameCount;
   final ConfidenceScore? confidenceScore;
+  final String? description;
+  final List<String>? warnings;
+  final String? processingMethod;
 
   RecipeMetadata({
     this.transcript,
@@ -136,6 +140,9 @@ class RecipeMetadata {
     this.videoDuration,
     this.frameCount,
     this.confidenceScore,
+    this.description,
+    this.warnings,
+    this.processingMethod,
   });
 
   Map<String, dynamic> toMap() {
@@ -146,10 +153,21 @@ class RecipeMetadata {
       'video_duration': videoDuration,
       'frame_count': frameCount,
       'confidence_score': confidenceScore?.toJson(),
+      'description': description,
+      'warnings': warnings != null && warnings!.isNotEmpty
+          ? jsonEncode(warnings)
+          : null,
+      'processing_method': processingMethod,
     };
   }
 
   factory RecipeMetadata.fromMap(Map<String, dynamic> map) {
+    List<String>? warnings;
+    if (map['warnings'] != null) {
+      final decoded = jsonDecode(map['warnings'] as String);
+      warnings = (decoded as List<dynamic>).map((e) => e as String).toList();
+    }
+
     return RecipeMetadata(
       transcript: map['transcript'] as String?,
       ocrText: map['ocr_text'] as String?,
@@ -160,6 +178,9 @@ class RecipeMetadata {
           ? ConfidenceScore.fromJson(
               map['confidence_score'] as Map<String, dynamic>)
           : null,
+      description: map['description'] as String?,
+      warnings: warnings,
+      processingMethod: map['processing_method'] as String?,
     );
   }
 
@@ -171,6 +192,9 @@ class RecipeMetadata {
       'videoDuration': videoDuration,
       'frameCount': frameCount,
       'confidenceScore': confidenceScore?.toJson(),
+      'description': description,
+      'warnings': warnings,
+      'processingMethod': processingMethod,
     };
   }
 
@@ -185,6 +209,11 @@ class RecipeMetadata {
           ? ConfidenceScore.fromJson(
               json['confidenceScore'] as Map<String, dynamic>)
           : null,
+      description: json['description'] as String?,
+      warnings: (json['warnings'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      processingMethod: json['processingMethod'] as String?,
     );
   }
 
@@ -196,6 +225,9 @@ class RecipeMetadata {
     String? videoDuration,
     int? frameCount,
     ConfidenceScore? confidenceScore,
+    String? description,
+    List<String>? warnings,
+    String? processingMethod,
   }) {
     return RecipeMetadata(
       transcript: transcript ?? this.transcript,
@@ -205,6 +237,9 @@ class RecipeMetadata {
       videoDuration: videoDuration ?? this.videoDuration,
       frameCount: frameCount ?? this.frameCount,
       confidenceScore: confidenceScore ?? this.confidenceScore,
+      description: description ?? this.description,
+      warnings: warnings ?? this.warnings,
+      processingMethod: processingMethod ?? this.processingMethod,
     );
   }
 }
