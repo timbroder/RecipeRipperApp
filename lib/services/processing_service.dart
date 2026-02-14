@@ -2,10 +2,14 @@ import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/processing_job.dart';
 import '../models/recipe.dart';
+import '../utils/cross_reference_checker.dart';
 import 'audio_extraction_service.dart';
 import 'confidence_calculator_service.dart';
 import 'database_service.dart';
 import 'frame_extraction_service.dart';
+import 'llm/llm_service.dart';
+import 'llm/llm_service_factory.dart';
+import 'llm_recipe_extraction_service.dart';
 import 'ocr_service.dart';
 import 'speech_transcription_service.dart';
 import 'recipe_parsing_service.dart';
@@ -17,6 +21,7 @@ class ProcessingService {
   final SpeechTranscriptionService _speechService;
   final FrameExtractionService _frameService;
   final OcrService _ocrService;
+  final LlmService? _llmService;
   final _uuid = const Uuid();
 
   ProcessingService({
@@ -25,22 +30,27 @@ class ProcessingService {
     SpeechTranscriptionService? speechService,
     FrameExtractionService? frameService,
     OcrService? ocrService,
+    LlmService? llmService,
   })  : _databaseService = databaseService,
         _audioService = audioService ?? AudioExtractionService(),
         _speechService = speechService ?? SpeechTranscriptionService(),
         _frameService = frameService ?? FrameExtractionService(),
-        _ocrService = ocrService ?? OcrService();
+        _ocrService = ocrService ?? OcrService(),
+        _llmService = llmService ?? LlmServiceFactory.create();
 
   /// Process a video file and extract recipe
   ///
   /// [videoPath] - Path to the video file
   /// [sourceUrl] - Optional source URL for the video
+  /// [description] - Optional video description (for description-only fast path)
   /// [existingJobId] - Optional existing job ID (for background processing)
   /// [onProgress] - Callback for progress updates (jobId, status, progress, currentStep)
   /// Returns the processing job ID
   Future<String> processVideo(
     String videoPath, {
     String? sourceUrl,
+    String? description,
+    String? videoTitle,
     String? existingJobId,
     void Function(String jobId, ProcessingStatus status, double progress,
             String currentStep)?
@@ -68,21 +78,107 @@ class ProcessingService {
     List<String> framePaths = [];
 
     try {
-      // Update job status to transcribing
+      final videoFileName =
+          videoTitle ?? path.basenameWithoutExtension(videoPath);
+      final sourcePlatform = _detectPlatform(sourceUrl);
+
+      // Step 0: Description-only fast path (YouTube only)
+      final llm = _llmService;
+      final llmAvailable = llm != null && await llm.isAvailable();
+
+      if (description != null && description.isNotEmpty && llmAvailable) {
+        await _updateJob(
+          jobId,
+          status: ProcessingStatus.analyzingDescription,
+          progress: 0.0,
+          currentStep: 'Analyzing description...',
+        );
+        onProgress?.call(
+          jobId,
+          ProcessingStatus.analyzingDescription,
+          0.0,
+          'Analyzing description...',
+        );
+
+        final descriptionRecipe =
+            await LlmRecipeExtractionService.tryDescriptionOnly(
+          description: description,
+          llmService: _llmService!,
+          videoTitle: videoFileName,
+          sourceUrl: sourceUrl,
+          sourcePlatform: sourcePlatform,
+        );
+
+        if (descriptionRecipe != null) {
+          // Fast path succeeded — skip full pipeline
+          await _updateJob(
+            jobId,
+            progress: 0.05,
+            currentStep: 'Recipe found in description!',
+          );
+          onProgress?.call(
+            jobId,
+            ProcessingStatus.analyzingDescription,
+            0.05,
+            'Recipe found in description!',
+          );
+
+          // Calculate processing time
+          final startTime =
+              (await _databaseService.getProcessingJob(jobId))?.createdAt ??
+                  DateTime.now();
+          final processingTimeSeconds =
+              DateTime.now().difference(startTime).inSeconds;
+
+          // Add processing time and confidence
+          var recipe = descriptionRecipe.copyWith(
+            metadata: descriptionRecipe.metadata?.copyWith(
+              processingTimeSeconds: processingTimeSeconds,
+              description: description,
+            ),
+          );
+
+          final confidenceScore = ConfidenceCalculatorService.calculate(recipe);
+          recipe = recipe.copyWith(
+            metadata:
+                recipe.metadata?.copyWith(confidenceScore: confidenceScore),
+          );
+
+          final recipeId = await _databaseService.insertRecipe(recipe);
+
+          await _updateJob(
+            jobId,
+            status: ProcessingStatus.completed,
+            progress: 1.0,
+            currentStep: 'Completed!',
+            recipeId: recipeId,
+            completedAt: DateTime.now(),
+          );
+          onProgress?.call(
+            jobId,
+            ProcessingStatus.completed,
+            1.0,
+            'Completed!',
+          );
+
+          return jobId;
+        }
+      }
+
+      // Step 1: Extract audio from video
       await _updateJob(
         jobId,
         status: ProcessingStatus.transcribing,
-        progress: 0.0,
+        progress: 0.05,
         currentStep: 'Extracting audio from video...',
       );
       onProgress?.call(
         jobId,
         ProcessingStatus.transcribing,
-        0.0,
+        0.05,
         'Extracting audio from video...',
       );
 
-      // Step 1: Extract audio from video
       audioPath = await _audioService.extractAudio(videoPath);
 
       await _updateJob(
@@ -101,7 +197,7 @@ class ProcessingService {
       final transcriptionResult = await _speechService.transcribeAudio(
         audioPath,
         onProgress: (p) {
-          final overallProgress = 0.1 + (p * 0.4); // 10% - 50%
+          final overallProgress = 0.1 + (p * 0.35); // 10% - 45%
           _updateJob(
             jobId,
             progress: overallProgress,
@@ -122,20 +218,20 @@ class ProcessingService {
       await _updateJob(
         jobId,
         status: ProcessingStatus.extractingText,
-        progress: 0.5,
+        progress: 0.45,
         currentStep: 'Extracting frames from video...',
       );
       onProgress?.call(
         jobId,
         ProcessingStatus.extractingText,
-        0.5,
+        0.45,
         'Extracting frames from video...',
       );
 
       framePaths = await _frameService.extractFrames(
         videoPath,
         onProgress: (p) {
-          final overallProgress = 0.5 + (p * 0.1); // 50% - 60%
+          final overallProgress = 0.45 + (p * 0.1); // 45% - 55%
           _updateJob(
             jobId,
             progress: overallProgress,
@@ -152,13 +248,13 @@ class ProcessingService {
 
       await _updateJob(
         jobId,
-        progress: 0.6,
+        progress: 0.55,
         currentStep: 'Recognizing text from frames...',
       );
       onProgress?.call(
         jobId,
         ProcessingStatus.extractingText,
-        0.6,
+        0.55,
         'Recognizing text from frames...',
       );
 
@@ -166,7 +262,7 @@ class ProcessingService {
       final ocrText = await _ocrService.recognizeAndDeduplicateFrames(
         framePaths,
         onProgress: (p) {
-          final overallProgress = 0.6 + (p * 0.3); // 60% - 90%
+          final overallProgress = 0.55 + (p * 0.25); // 55% - 80%
           _updateJob(
             jobId,
             progress: overallProgress,
@@ -181,20 +277,6 @@ class ProcessingService {
         },
       );
 
-      // Step 5: Parse recipe from extracted data
-      await _updateJob(
-        jobId,
-        status: ProcessingStatus.parsing,
-        progress: 0.9,
-        currentStep: 'Parsing recipe...',
-      );
-      onProgress?.call(
-        jobId,
-        ProcessingStatus.parsing,
-        0.9,
-        'Parsing recipe...',
-      );
-
       // Calculate processing time
       final startTime =
           (await _databaseService.getProcessingJob(jobId))?.createdAt ??
@@ -202,26 +284,102 @@ class ProcessingService {
       final processingTimeSeconds =
           DateTime.now().difference(startTime).inSeconds;
 
-      // Use RecipeParsingService to parse the recipe
-      final videoFileName = path.basenameWithoutExtension(videoPath);
-      var recipe = await RecipeParsingService.parseRecipe(
+      final baseMetadata = RecipeMetadata(
         transcript: transcript,
         ocrText: ocrText,
-        videoTitle: videoFileName,
-        sourceUrl: sourceUrl,
-        sourcePlatform: _detectPlatform(sourceUrl),
-        metadata: RecipeMetadata(
-          transcript: transcript,
-          ocrText: ocrText,
-          processingTimeSeconds: processingTimeSeconds,
-          frameCount: framePaths.length,
-        ),
+        processingTimeSeconds: processingTimeSeconds,
+        frameCount: framePaths.length,
+        description: description,
       );
 
-      // Calculate confidence score
-      final confidenceScore = ConfidenceCalculatorService.calculate(recipe);
+      Recipe? recipe;
 
-      // Update recipe with confidence score
+      // Step 5: Try LLM extraction if available
+      if (llmAvailable) {
+        await _updateJob(
+          jobId,
+          status: ProcessingStatus.aiExtracting,
+          progress: 0.80,
+          currentStep: 'Extracting recipe with AI...',
+        );
+        onProgress?.call(
+          jobId,
+          ProcessingStatus.aiExtracting,
+          0.80,
+          'Extracting recipe with AI...',
+        );
+
+        recipe = await LlmRecipeExtractionService.tryFullLlm(
+          transcript: transcript,
+          ocrText: ocrText,
+          description: description,
+          llmService: _llmService!,
+          videoTitle: videoFileName,
+          sourceUrl: sourceUrl,
+          sourcePlatform: sourcePlatform,
+          existingMetadata: baseMetadata,
+        );
+      }
+
+      // Step 6: Heuristic fallback
+      if (recipe == null) {
+        await _updateJob(
+          jobId,
+          status: ProcessingStatus.parsing,
+          progress: 0.90,
+          currentStep: 'Parsing recipe...',
+        );
+        onProgress?.call(
+          jobId,
+          ProcessingStatus.parsing,
+          0.90,
+          'Parsing recipe...',
+        );
+
+        recipe = await RecipeParsingService.parseRecipe(
+          transcript: transcript,
+          ocrText: ocrText,
+          videoTitle: videoFileName,
+          sourceUrl: sourceUrl,
+          sourcePlatform: sourcePlatform,
+          description: description,
+          metadata: baseMetadata.copyWith(processingMethod: 'heuristic'),
+        );
+
+        // Run cross-reference check on heuristic results
+        final crossRef = CrossReferenceChecker.check(
+          ingredients: recipe.ingredients,
+          directions: recipe.directions,
+        );
+
+        if (crossRef.autoAddedIngredients.isNotEmpty ||
+            crossRef.warnings.isNotEmpty) {
+          recipe = recipe.copyWith(
+            ingredients: [
+              ...recipe.ingredients,
+              ...crossRef.autoAddedIngredients,
+            ],
+            metadata: recipe.metadata?.copyWith(
+              warnings: crossRef.warnings.isNotEmpty ? crossRef.warnings : null,
+            ),
+          );
+        }
+      }
+
+      // Step 7: Calculate confidence score
+      await _updateJob(
+        jobId,
+        progress: 0.95,
+        currentStep: 'Calculating confidence...',
+      );
+      onProgress?.call(
+        jobId,
+        ProcessingStatus.parsing,
+        0.95,
+        'Calculating confidence...',
+      );
+
+      final confidenceScore = ConfidenceCalculatorService.calculate(recipe);
       recipe = recipe.copyWith(
         metadata: recipe.metadata?.copyWith(confidenceScore: confidenceScore) ??
             RecipeMetadata(confidenceScore: confidenceScore),

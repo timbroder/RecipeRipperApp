@@ -118,11 +118,17 @@ class ProcessingJobCard extends StatelessWidget {
       case ProcessingStatus.downloading:
         icon = Icons.cloud_download;
         color = colorScheme.primary;
+      case ProcessingStatus.analyzingDescription:
+        icon = Icons.description;
+        color = colorScheme.primary;
       case ProcessingStatus.transcribing:
         icon = Icons.mic;
         color = colorScheme.primary;
       case ProcessingStatus.extractingText:
         icon = Icons.document_scanner;
+        color = colorScheme.primary;
+      case ProcessingStatus.aiExtracting:
+        icon = Icons.auto_awesome;
         color = colorScheme.primary;
       case ProcessingStatus.parsing:
         icon = Icons.auto_fix_high;
@@ -187,10 +193,14 @@ class ProcessingJobCard extends StatelessWidget {
         return 'Waiting to start...';
       case ProcessingStatus.downloading:
         return 'Downloading video...';
+      case ProcessingStatus.analyzingDescription:
+        return 'Analyzing description...';
       case ProcessingStatus.transcribing:
         return 'Transcribing speech...';
       case ProcessingStatus.extractingText:
         return 'Reading on-screen text...';
+      case ProcessingStatus.aiExtracting:
+        return 'Extracting recipe with AI...';
       case ProcessingStatus.parsing:
         return 'Parsing recipe...';
       case ProcessingStatus.completed:

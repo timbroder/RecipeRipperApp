@@ -1,8 +1,10 @@
 enum ProcessingStatus {
   queued,
   downloading,
+  analyzingDescription,
   transcribing,
   extractingText,
+  aiExtracting,
   parsing,
   completed,
   failed,
@@ -144,8 +146,10 @@ class ProcessingJob {
 
   bool get isActive =>
       status == ProcessingStatus.downloading ||
+      status == ProcessingStatus.analyzingDescription ||
       status == ProcessingStatus.transcribing ||
       status == ProcessingStatus.extractingText ||
+      status == ProcessingStatus.aiExtracting ||
       status == ProcessingStatus.parsing;
 
   bool get isFinished =>

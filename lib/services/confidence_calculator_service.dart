@@ -144,9 +144,9 @@ class ConfidenceCalculatorService {
     final transcript = metadata.transcript ?? '';
     final transcriptLength = transcript.length;
     if (transcriptLength >= _goodTranscriptLength) {
-      score += 0.4;
+      score += 0.35;
     } else if (transcriptLength >= _minTranscriptLength) {
-      score += 0.25;
+      score += 0.2;
     } else if (transcriptLength > 0) {
       score += 0.1;
     }
@@ -155,9 +155,9 @@ class ConfidenceCalculatorService {
     final ocrText = metadata.ocrText ?? '';
     final ocrLength = ocrText.length;
     if (ocrLength >= _goodOcrLength) {
-      score += 0.3;
+      score += 0.25;
     } else if (ocrLength >= _minOcrLength) {
-      score += 0.15;
+      score += 0.12;
     } else if (ocrLength > 0) {
       score += 0.05;
     }
@@ -165,16 +165,30 @@ class ConfidenceCalculatorService {
     // Frame count bonus
     final frameCount = metadata.frameCount ?? 0;
     if (frameCount >= 50) {
-      score += 0.15;
-    } else if (frameCount >= 20) {
       score += 0.1;
+    } else if (frameCount >= 20) {
+      score += 0.07;
     } else if (frameCount > 0) {
-      score += 0.05;
+      score += 0.03;
     }
 
     // Title quality
     if (recipe.title.isNotEmpty && recipe.title != 'Untitled Recipe') {
-      score += 0.15;
+      score += 0.1;
+    }
+
+    // Description quality bonus
+    final description = metadata.description ?? '';
+    if (description.length >= 200) {
+      score += 0.1;
+    } else if (description.isNotEmpty) {
+      score += 0.05;
+    }
+
+    // Processing method bonus (LLM results get a small boost)
+    final method = metadata.processingMethod;
+    if (method == 'llm_full' || method == 'description_only') {
+      score += 0.1;
     }
 
     return score.clamp(0.0, 1.0);

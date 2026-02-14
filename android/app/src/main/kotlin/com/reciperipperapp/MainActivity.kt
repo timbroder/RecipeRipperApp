@@ -15,6 +15,7 @@ class MainActivity: FlutterActivity() {
     private var sharedUrl: String? = null
     private var speechRecognitionBridge: SpeechRecognitionBridge? = null
     private var mlKitOcrBridge: MlKitOcrBridge? = null
+    private var llamaCppBridge: LlamaCppBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -79,6 +80,10 @@ class MainActivity: FlutterActivity() {
         // Set up Sprint 2 platform channels
         speechRecognitionBridge = SpeechRecognitionBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         mlKitOcrBridge = MlKitOcrBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+
+        // Set up llama.cpp bridge for on-device LLM
+        llamaCppBridge = LlamaCppBridge()
+        llamaCppBridge?.setup(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     override fun onDestroy() {

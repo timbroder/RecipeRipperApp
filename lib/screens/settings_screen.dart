@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/sync_provider.dart';
 import '../providers/recipe_provider.dart';
 import '../services/export_service.dart';
 import '../services/import_service.dart';
+import '../services/llm/llm_service_factory.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,12 +22,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _storageUsage = 'Calculating...';
   bool _isExporting = false;
   bool _isImporting = false;
+  bool _aiExtractionEnabled = true;
+  bool _llmAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _loadAppInfo();
     _calculateStorageUsage();
+    _loadAiSettings();
   }
 
   Future<void> _loadAppInfo() async {
@@ -56,6 +61,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _storageUsage = 'Unable to calculate';
         });
       }
+    }
+  }
+
+  Future<void> _loadAiSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final llmService = LlmServiceFactory.create();
+    final available = llmService != null && await llmService.isAvailable();
+
+    if (mounted) {
+      setState(() {
+        _aiExtractionEnabled = prefs.getBool('ai_extraction_enabled') ?? true;
+        _llmAvailable = available;
+      });
+    }
+  }
+
+  Future<void> _setAiExtractionEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ai_extraction_enabled', value);
+    if (mounted) {
+      setState(() => _aiExtractionEnabled = value);
     }
   }
 
@@ -95,6 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
               const Divider(),
+              _buildAiProcessingSection(),
+              const Divider(),
               _buildCloudSyncSection(syncProvider),
               const Divider(),
               _buildDataSection(syncProvider),
@@ -104,6 +132,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildAiProcessingSection() {
+    return _buildSection(
+      title: 'AI Processing',
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.auto_awesome),
+          title: const Text('Use AI Extraction'),
+          subtitle: Text(
+            _llmAvailable
+                ? 'Use on-device AI for better recipe extraction'
+                : 'AI model not available on this device',
+          ),
+          value: _aiExtractionEnabled && _llmAvailable,
+          onChanged: _llmAvailable ? _setAiExtractionEnabled : null,
+        ),
+        ListTile(
+          leading: Icon(
+            _llmAvailable ? Icons.check_circle : Icons.cancel,
+            color: _llmAvailable ? Colors.green : Colors.grey,
+          ),
+          title: const Text('AI Model Status'),
+          subtitle: Text(
+            _llmAvailable
+                ? 'On-device model available'
+                : Platform.isIOS
+                    ? 'Requires iOS 26+'
+                    : 'Model not downloaded',
+          ),
+        ),
+      ],
     );
   }
 

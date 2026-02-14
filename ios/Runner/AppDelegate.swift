@@ -12,6 +12,7 @@ import CloudKit
   private var speechRecognitionBridge: SpeechRecognitionBridge?
   private var visionOcrBridge: VisionOcrBridge?
   private var iCloudBridge: ICloudBridge?
+  private var foundationModelsBridge: FoundationModelsBridge?
 
   override func application(
     _ application: UIApplication,
@@ -60,6 +61,10 @@ import CloudKit
     // Set up Sprint 5 iCloud sync
     iCloudBridge = ICloudBridge.shared
     iCloudBridge?.setup(with: controller.binaryMessenger)
+
+    // Set up Foundation Models bridge for on-device LLM
+    foundationModelsBridge = FoundationModelsBridge()
+    foundationModelsBridge?.setup(with: controller.binaryMessenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

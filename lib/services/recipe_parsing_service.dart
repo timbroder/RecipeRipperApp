@@ -5,6 +5,8 @@ import '../utils/text_splitter.dart';
 import '../utils/ingredient_classifier.dart';
 import '../utils/direction_classifier.dart';
 import '../utils/deduplicator.dart';
+import '../utils/noise_filter.dart';
+import '../utils/spoken_to_imperative.dart';
 import '../utils/parsing_utils.dart';
 
 /// Service for parsing raw transcript and OCR text into structured recipes
@@ -18,10 +20,17 @@ class RecipeParsingService {
     String? sourceUrl,
     String? sourcePlatform,
     String? thumbnailPath,
+    String? description,
     RecipeMetadata? metadata,
   }) async {
-    // Combine transcript and OCR text
-    final combinedText = _combineTexts(transcript, ocrText);
+    // Apply noise filtering before combining
+    final filteredTranscript =
+        transcript != null ? NoiseFilter.filterText(transcript) : null;
+    final filteredOcr =
+        ocrText != null ? NoiseFilter.filterText(ocrText) : null;
+
+    // Combine transcript, OCR, and description text
+    final combinedText = _combineTexts(filteredTranscript, filteredOcr);
 
     // Extract title
     final title = TextSplitter.extractTitle(
@@ -118,12 +127,16 @@ class RecipeParsingService {
       final cleaned = DirectionClassifier.cleanDirection(line);
 
       if (cleaned.isNotEmpty) {
-        directions.add(
-          Direction(
-            stepNumber: i + 1,
-            text: cleaned,
-          ),
-        );
+        // Apply spoken-to-imperative conversion
+        final imperative = SpokenToImperative.convert(cleaned);
+        if (imperative.isNotEmpty) {
+          directions.add(
+            Direction(
+              stepNumber: i + 1,
+              text: imperative,
+            ),
+          );
+        }
       }
     }
 

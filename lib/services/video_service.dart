@@ -49,6 +49,7 @@ class VideoMetadata {
   final String localPath;
   final int? fileSizeBytes;
   final String? resolution;
+  final String? description;
 
   VideoMetadata({
     required this.title,
@@ -58,6 +59,7 @@ class VideoMetadata {
     required this.localPath,
     this.fileSizeBytes,
     this.resolution,
+    this.description,
   });
 
   Map<String, dynamic> toJson() {
@@ -69,6 +71,7 @@ class VideoMetadata {
       'local_path': localPath,
       'file_size_bytes': fileSizeBytes,
       'resolution': resolution,
+      'description': description,
     };
   }
 
@@ -81,6 +84,7 @@ class VideoMetadata {
       localPath: json['local_path'] as String,
       fileSizeBytes: json['file_size_bytes'] as int?,
       resolution: json['resolution'] as String?,
+      description: json['description'] as String?,
     );
   }
 }
@@ -92,6 +96,10 @@ typedef ProgressCallback = void Function(double progress, String status);
 class VideoService {
   final Dio _dio = Dio();
   final YoutubeExplode _youtubeExplode = YoutubeExplode();
+
+  /// Cached YouTube metadata from the last download
+  String? _lastYouTubeTitle;
+  String? _lastYouTubeDescription;
 
   /// List of supported video platforms
   static const supportedPlatforms = ['YouTube', 'Instagram', 'TikTok'];
@@ -225,6 +233,8 @@ class VideoService {
 
       // Get video metadata
       final video = await _youtubeExplode.videos.get(url);
+      _lastYouTubeTitle = video.title;
+      _lastYouTubeDescription = video.description;
 
       onProgress?.call(0.2, 'Preparing download...');
 
@@ -365,6 +375,7 @@ class VideoService {
         localPath: filePath,
         fileSizeBytes: fileSizeBytes,
         resolution: resolution,
+        description: _lastYouTubeDescription,
       );
     } catch (e) {
       if (e is VideoException) rethrow;
@@ -423,6 +434,11 @@ class VideoService {
 
   /// Generates a title from file path or URL
   String _generateTitle(String filePath, String? sourceUrl) {
+    // Use actual YouTube title if available
+    if (_lastYouTubeTitle != null && _lastYouTubeTitle!.isNotEmpty) {
+      return _lastYouTubeTitle!;
+    }
+
     if (sourceUrl != null && sourceUrl.isNotEmpty) {
       try {
         final uri = Uri.parse(sourceUrl);
@@ -515,6 +531,23 @@ class VideoService {
       }
     } catch (e) {
       debugPrint('Warning: Failed to cleanup old videos: $e');
+    }
+  }
+
+  /// Fetches just the YouTube description without downloading the video.
+  /// Useful for the description-only fast path.
+  Future<String?> fetchYouTubeDescription(String url) async {
+    try {
+      final yt = YoutubeExplode();
+      try {
+        final video = await yt.videos.get(url);
+        return video.description;
+      } finally {
+        yt.close();
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch YouTube description: $e');
+      return null;
     }
   }
 

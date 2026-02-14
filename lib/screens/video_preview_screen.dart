@@ -103,6 +103,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
             videoPath: _metadata!.localPath,
             sourceUrl: _metadata!.sourceUrl,
             videoTitle: _metadata!.title,
+            description: _metadata!.description,
           ),
         ),
       );

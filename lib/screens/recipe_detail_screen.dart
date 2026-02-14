@@ -706,6 +706,81 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         children: [
           const Divider(),
           const SizedBox(height: 8),
+          // Warnings section
+          if (metadata.warnings != null && metadata.warnings!.isNotEmpty) ...[
+            Card(
+              color: Colors.amber.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.amber.shade800,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Extraction Notes',
+                          style: textTheme.titleSmall?.copyWith(
+                            color: Colors.amber.shade900,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...metadata.warnings!.map(
+                      (warning) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '\u2022 ',
+                              style: TextStyle(color: Colors.amber.shade800),
+                            ),
+                            Expanded(
+                              child: Text(
+                                warning,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Processing method badge
+          if (metadata.processingMethod != null) ...[
+            Chip(
+              avatar: Icon(
+                metadata.processingMethod == 'heuristic'
+                    ? Icons.pattern
+                    : Icons.auto_awesome,
+                size: 18,
+              ),
+              label: Text(
+                metadata.processingMethod == 'heuristic'
+                    ? 'Pattern Matched'
+                    : 'AI Extracted',
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // Confidence Score Section
           if (metadata.confidenceScore != null) ...[
             Text(
