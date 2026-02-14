@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 title: const Text('Enter Video URL'),
-                subtitle: const Text('Any video link'),
+                subtitle: const Text('Video or recipe page'),
                 onTap: () {
                   Navigator.pop(context);
                   _showUrlInputDialog();
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'YouTube, Instagram, TikTok, or any video URL',
+                    'Paste any video or recipe URL',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
