@@ -159,6 +159,36 @@ void main() {
         );
       });
 
+      test('should detect TikTok short URLs (vm.tiktok.com)', () {
+        expect(
+          videoService.isSupportedPlatform('https://vm.tiktok.com/ZMhAbCdEf/'),
+          isTrue,
+        );
+        expect(
+          videoService.detectUrlType('https://vm.tiktok.com/ZMhAbCdEf/'),
+          equals('tiktok'),
+        );
+        expect(
+          videoService.getPlatformName('https://vm.tiktok.com/ZMhAbCdEf/'),
+          equals('TikTok'),
+        );
+      });
+
+      test('should detect Instagram reel and post variants', () {
+        expect(
+          videoService.detectUrlType('https://www.instagram.com/reels/abc123/'),
+          equals('instagram'),
+        );
+        expect(
+          videoService.detectUrlType('https://www.instagram.com/p/xyz789/'),
+          equals('instagram'),
+        );
+        expect(
+          videoService.detectUrlType('https://m.instagram.com/reel/abc123/'),
+          equals('instagram'),
+        );
+      });
+
       test('should detect direct video URLs', () {
         expect(
           videoService.detectUrlType('https://example.com/video.mp4'),

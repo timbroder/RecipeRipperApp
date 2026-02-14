@@ -8,6 +8,8 @@ import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+import 'video_page_extractor.dart';
+
 /// Exception thrown when video operations fail
 class VideoException implements Exception {
   final String message;
@@ -97,9 +99,9 @@ class VideoService {
   final Dio _dio = Dio();
   final YoutubeExplode _youtubeExplode = YoutubeExplode();
 
-  /// Cached YouTube metadata from the last download
-  String? _lastYouTubeTitle;
-  String? _lastYouTubeDescription;
+  /// Cached metadata from the last download
+  String? _lastVideoTitle;
+  String? _lastVideoDescription;
 
   /// List of supported video platforms
   static const supportedPlatforms = ['YouTube', 'Instagram', 'TikTok'];
@@ -211,10 +213,9 @@ class VideoService {
       case 'youtube':
         return await _downloadYouTubeVideo(url, onProgress: onProgress);
       case 'instagram':
+        return await _downloadInstagramVideo(url, onProgress: onProgress);
       case 'tiktok':
-        // TODO: Implement Instagram/TikTok video download
-        // For now, attempt direct download which may work for some URLs
-        return await _downloadDirectVideo(url, onProgress: onProgress);
+        return await _downloadTikTokVideo(url, onProgress: onProgress);
       default:
         throw VideoException(
           'Unsupported platform. Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
@@ -233,8 +234,8 @@ class VideoService {
 
       // Get video metadata
       final video = await _youtubeExplode.videos.get(url);
-      _lastYouTubeTitle = video.title;
-      _lastYouTubeDescription = video.description;
+      _lastVideoTitle = video.title;
+      _lastVideoDescription = video.description;
 
       onProgress?.call(0.2, 'Preparing download...');
 
@@ -291,48 +292,222 @@ class VideoService {
     }
   }
 
-  /// Downloads a direct video URL
-  Future<String> _downloadDirectVideo(
+  static const _mobileUserAgent =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) '
+      'Version/17.0 Mobile/15E148 Safari/604.1';
+
+  /// Downloads an Instagram video by fetching the page HTML and extracting
+  /// the actual video URL.
+  Future<String> _downloadInstagramVideo(
     String url, {
     ProgressCallback? onProgress,
   }) async {
+    _lastVideoTitle = null;
+    _lastVideoDescription = null;
+
     try {
-      onProgress?.call(0.1, 'Starting download...');
+      onProgress?.call(0.1, 'Loading Instagram page...');
 
-      // Generate local file path
-      final appDir = await getApplicationDocumentsDirectory();
-      final videosDir = Directory('${appDir.path}/videos');
-      if (!await videosDir.exists()) {
-        await videosDir.create(recursive: true);
-      }
+      final normalizedUrl = VideoPageExtractor.normalizeInstagramUrl(url);
 
-      final extension = path.extension(url).replaceAll('.', '');
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$extension';
-      final filePath = '${videosDir.path}/$fileName';
-
-      // Download with progress tracking
-      await _dio.download(
-        url,
-        filePath,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            final progress =
-                0.1 + (received / total * 0.8); // 10-90% for download
-            onProgress?.call(
-              progress,
-              'Downloading: ${(received / 1024 / 1024).toStringAsFixed(1)} MB',
-            );
-          }
-        },
+      final response = await _dio.get<String>(
+        normalizedUrl,
+        options: Options(
+          headers: {
+            'User-Agent': _mobileUserAgent,
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          followRedirects: true,
+          maxRedirects: 5,
+        ),
       );
 
-      onProgress?.call(1.0, 'Download complete!');
+      final html = response.data;
+      if (html == null || html.isEmpty) {
+        throw VideoException(
+          'Could not load Instagram page. The video may be private or the link may be invalid.',
+          code: 'INSTAGRAM_PAGE_EMPTY',
+        );
+      }
 
-      return filePath;
+      onProgress?.call(0.3, 'Extracting video URL...');
+
+      final extracted = VideoPageExtractor.extractInstagramVideoData(html);
+      if (extracted == null) {
+        throw VideoException(
+          'Could not find video. The post may be private or Instagram may have changed its page format.',
+          code: 'INSTAGRAM_VIDEO_NOT_FOUND',
+        );
+      }
+
+      _lastVideoTitle = extracted.title;
+      _lastVideoDescription = extracted.description;
+
+      onProgress?.call(0.4, 'Downloading video...');
+
+      return await _downloadVideoFile(
+        extracted.videoUrl,
+        onProgress: onProgress,
+        refererUrl: 'https://www.instagram.com/',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw VideoException(
+          'This Instagram video is private or requires login.',
+          code: 'INSTAGRAM_PRIVATE',
+        );
+      }
+      if (e.response?.statusCode == 429) {
+        throw VideoException(
+          'Instagram rate limit reached. Please try again in a few minutes.',
+          code: 'INSTAGRAM_RATE_LIMITED',
+        );
+      }
+      throw VideoException(
+        'Failed to download Instagram video: $e',
+        code: 'INSTAGRAM_DOWNLOAD_FAILED',
+      );
     } catch (e) {
-      throw VideoException('Failed to download video: $e',
-          code: 'DOWNLOAD_FAILED');
+      if (e is VideoException) rethrow;
+      throw VideoException(
+        'Failed to download Instagram video: $e',
+        code: 'INSTAGRAM_DOWNLOAD_FAILED',
+      );
     }
+  }
+
+  /// Downloads a TikTok video by fetching the page HTML and extracting
+  /// the actual video URL.
+  Future<String> _downloadTikTokVideo(
+    String url, {
+    ProgressCallback? onProgress,
+  }) async {
+    _lastVideoTitle = null;
+    _lastVideoDescription = null;
+
+    try {
+      onProgress?.call(0.1, 'Loading TikTok page...');
+
+      final response = await _dio.get<String>(
+        url,
+        options: Options(
+          headers: {
+            'User-Agent': _mobileUserAgent,
+            'Accept':
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          followRedirects: true,
+          maxRedirects: 10,
+        ),
+      );
+
+      final html = response.data;
+      if (html == null || html.isEmpty) {
+        throw VideoException(
+          'Could not load TikTok page. The video may be private or the link may be invalid.',
+          code: 'TIKTOK_PAGE_EMPTY',
+        );
+      }
+
+      onProgress?.call(0.3, 'Extracting video URL...');
+
+      final extracted = VideoPageExtractor.extractTikTokVideoData(html);
+      if (extracted == null) {
+        throw VideoException(
+          'Could not find video. The post may be private or TikTok may have changed its page format.',
+          code: 'TIKTOK_VIDEO_NOT_FOUND',
+        );
+      }
+
+      _lastVideoTitle = extracted.title;
+      _lastVideoDescription = extracted.description;
+
+      onProgress?.call(0.4, 'Downloading video...');
+
+      return await _downloadVideoFile(
+        extracted.videoUrl,
+        onProgress: onProgress,
+        refererUrl: 'https://www.tiktok.com/',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw VideoException(
+          'This TikTok video is private or requires login.',
+          code: 'TIKTOK_PRIVATE',
+        );
+      }
+      if (e.response?.statusCode == 429) {
+        throw VideoException(
+          'TikTok rate limit reached. Please try again in a few minutes.',
+          code: 'TIKTOK_RATE_LIMITED',
+        );
+      }
+      throw VideoException(
+        'Failed to download TikTok video: $e',
+        code: 'TIKTOK_DOWNLOAD_FAILED',
+      );
+    } catch (e) {
+      if (e is VideoException) rethrow;
+      throw VideoException(
+        'Failed to download TikTok video: $e',
+        code: 'TIKTOK_DOWNLOAD_FAILED',
+      );
+    }
+  }
+
+  /// Downloads a video file from a direct URL with progress tracking.
+  ///
+  /// Validates that the downloaded file is >10KB to catch expired URLs
+  /// that return error pages instead of actual video data.
+  Future<String> _downloadVideoFile(
+    String videoUrl, {
+    ProgressCallback? onProgress,
+    String? refererUrl,
+  }) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final videosDir = Directory('${appDir.path}/videos');
+    if (!await videosDir.exists()) {
+      await videosDir.create(recursive: true);
+    }
+
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+    final filePath = '${videosDir.path}/$fileName';
+
+    await _dio.download(
+      videoUrl,
+      filePath,
+      options: Options(
+        headers: {
+          'User-Agent': _mobileUserAgent,
+          if (refererUrl != null) 'Referer': refererUrl,
+        },
+      ),
+      onReceiveProgress: (received, total) {
+        if (total > 0) {
+          final progress = 0.4 + (received / total * 0.55);
+          onProgress?.call(
+            progress,
+            'Downloading: ${(received / 1024 / 1024).toStringAsFixed(1)} MB',
+          );
+        }
+      },
+    );
+
+    // Validate file size — expired URLs often return small error pages
+    final file = File(filePath);
+    final fileSize = await file.length();
+    if (fileSize < 10240) {
+      await file.delete();
+      throw VideoException(
+        'Downloaded file is too small to be a video. The video URL may have expired.',
+        code: 'DOWNLOAD_TOO_SMALL',
+      );
+    }
+
+    onProgress?.call(1.0, 'Download complete!');
+    return filePath;
   }
 
   /// Extracts metadata from a video file
@@ -375,7 +550,7 @@ class VideoService {
         localPath: filePath,
         fileSizeBytes: fileSizeBytes,
         resolution: resolution,
-        description: _lastYouTubeDescription,
+        description: _lastVideoDescription,
       );
     } catch (e) {
       if (e is VideoException) rethrow;
@@ -435,8 +610,8 @@ class VideoService {
   /// Generates a title from file path or URL
   String _generateTitle(String filePath, String? sourceUrl) {
     // Use actual YouTube title if available
-    if (_lastYouTubeTitle != null && _lastYouTubeTitle!.isNotEmpty) {
-      return _lastYouTubeTitle!;
+    if (_lastVideoTitle != null && _lastVideoTitle!.isNotEmpty) {
+      return _lastVideoTitle!;
     }
 
     if (sourceUrl != null && sourceUrl.isNotEmpty) {
