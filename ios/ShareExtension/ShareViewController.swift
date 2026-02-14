@@ -7,41 +7,9 @@ class ShareViewController: UIViewController {
     private let appGroupIdentifier = "group.com.reciperipperapp"
     private let sharedUrlKey = "SharedURL"
 
-    // Supported video platforms
-    private let supportedHosts = [
-        "youtube.com", "youtu.be",
-        "instagram.com",
-        "tiktok.com"
-    ]
-
     override func viewDidLoad() {
         super.viewDidLoad()
         handleSharedContent()
-    }
-
-    /// Checks if a URL is from a supported platform
-    private func isSupportedPlatform(_ urlString: String) -> Bool {
-        guard let url = URL(string: urlString),
-              let host = url.host?.lowercased() else {
-            return false
-        }
-
-        return supportedHosts.contains { host.contains($0) }
-    }
-
-    /// Shows an alert for unsupported platforms
-    private func showUnsupportedPlatformAlert() {
-        DispatchQueue.main.async { [weak self] in
-            let alert = UIAlertController(
-                title: "Unsupported Platform",
-                message: "Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                self?.completeRequest()
-            })
-            self?.present(alert, animated: true)
-        }
     }
 
     private func handleSharedContent() {
@@ -58,7 +26,7 @@ class ShareViewController: UIViewController {
                 if attachment.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                     attachment.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { [weak self] item, error in
                         if let url = item as? URL {
-                            self?.validateAndProcessUrl(url.absoluteString)
+                            self?.processSharedUrl(url.absoluteString)
                         }
                     }
                     return
@@ -68,7 +36,7 @@ class ShareViewController: UIViewController {
                 if attachment.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
                     attachment.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { [weak self] item, error in
                         if let text = item as? String, let url = self?.extractUrl(from: text) {
-                            self?.validateAndProcessUrl(url)
+                            self?.processSharedUrl(url)
                         } else {
                             self?.completeRequest()
                         }
@@ -96,15 +64,6 @@ class ShareViewController: UIViewController {
         }
 
         return nil
-    }
-
-    /// Validates URL is from supported platform before processing
-    private func validateAndProcessUrl(_ urlString: String) {
-        if isSupportedPlatform(urlString) {
-            processSharedUrl(urlString)
-        } else {
-            showUnsupportedPlatformAlert()
-        }
     }
 
     private func processSharedUrl(_ urlString: String) {

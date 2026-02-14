@@ -174,6 +174,64 @@ void main() {
       });
     });
 
+    group('extractGenericVideoData', () {
+      test('should extract og:video from generic HTML', () {
+        const html = '''
+<html><head>
+  <meta property="og:video" content="https://example.com/videos/recipe.mp4" />
+  <meta property="og:title" content="My Recipe Video" />
+  <meta property="og:description" content="A great cooking tutorial" />
+</head><body></body></html>''';
+
+        final result = VideoPageExtractor.extractGenericVideoData(html);
+        expect(result, isNotNull);
+        expect(
+            result!.videoUrl, equals('https://example.com/videos/recipe.mp4'));
+        expect(result.title, equals('My Recipe Video'));
+        expect(result.description, equals('A great cooking tutorial'));
+      });
+
+      test('should prefer og:video:secure_url over og:video', () {
+        const html = '''
+<html><head>
+  <meta property="og:video" content="http://example.com/video.mp4" />
+  <meta property="og:video:secure_url" content="https://example.com/video.mp4" />
+</head><body></body></html>''';
+
+        final result = VideoPageExtractor.extractGenericVideoData(html);
+        expect(result, isNotNull);
+        expect(result!.videoUrl, equals('https://example.com/video.mp4'));
+      });
+
+      test('should return null when no og:video tag found', () {
+        const html = '''
+<html><head>
+  <meta property="og:title" content="Just a page" />
+  <meta property="og:image" content="https://example.com/photo.jpg" />
+</head><body></body></html>''';
+
+        final result = VideoPageExtractor.extractGenericVideoData(html);
+        expect(result, isNull);
+      });
+
+      test('should return null for empty HTML', () {
+        final result = VideoPageExtractor.extractGenericVideoData('');
+        expect(result, isNull);
+      });
+
+      test('should handle escaped URLs', () {
+        const html = '''
+<html><head>
+  <meta property="og:video" content="https:\\/\\/cdn.example.com\\/v\\/video.mp4?a=1\\u0026b=2" />
+</head><body></body></html>''';
+
+        final result = VideoPageExtractor.extractGenericVideoData(html);
+        expect(result, isNotNull);
+        expect(result!.videoUrl,
+            equals('https://cdn.example.com/v/video.mp4?a=1&b=2'));
+      });
+    });
+
     group('extractTikTokVideoData', () {
       test('should extract from __UNIVERSAL_DATA_FOR_REHYDRATION__', () {
         const html = '''

@@ -15,10 +15,11 @@ class ExtractedVideoData {
   });
 }
 
-/// Extracts video URLs and metadata from Instagram and TikTok page HTML.
+/// Extracts video URLs and metadata from video page HTML.
 ///
 /// Uses multiple strategies per platform (meta tags, JSON-LD, embedded JSON)
 /// so that if one breaks due to platform changes, others may still work.
+/// Also supports generic og:video extraction for unknown sites.
 class VideoPageExtractor {
   /// Normalizes an Instagram URL to canonical form.
   ///
@@ -70,6 +71,28 @@ class VideoPageExtractor {
     return _extractTikTokFromUniversalData(html) ??
         _extractTikTokFromMetaTags(html) ??
         _extractTikTokFromEmbeddedJson(html);
+  }
+
+  /// Extracts video data from any HTML page using generic og:video meta tags.
+  ///
+  /// Works on any site that includes standard Open Graph video tags.
+  /// Returns null if no og:video tag is found.
+  static ExtractedVideoData? extractGenericVideoData(String html) {
+    final document = html_parser.parse(html);
+
+    final videoUrl = _getMetaContent(document, 'og:video:secure_url') ??
+        _getMetaContent(document, 'og:video');
+
+    if (videoUrl == null || videoUrl.isEmpty) return null;
+
+    final title = _getMetaContent(document, 'og:title');
+    final description = _getMetaContent(document, 'og:description');
+
+    return ExtractedVideoData(
+      videoUrl: _unescapeUrl(videoUrl),
+      title: title,
+      description: description,
+    );
   }
 
   // ---------------------------------------------------------------------------

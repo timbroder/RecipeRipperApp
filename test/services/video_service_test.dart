@@ -206,6 +206,14 @@ void main() {
           videoService.detectUrlType('https://example.com/video.mkv'),
           equals('direct'),
         );
+        expect(
+          videoService.detectUrlType('https://example.com/video.m4v'),
+          equals('direct'),
+        );
+        expect(
+          videoService.detectUrlType('https://example.com/video.webm'),
+          equals('direct'),
+        );
       });
 
       test('should detect unknown URLs', () {

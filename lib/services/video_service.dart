@@ -103,8 +103,14 @@ class VideoService {
   String? _lastVideoTitle;
   String? _lastVideoDescription;
 
-  /// List of supported video platforms
-  static const supportedPlatforms = ['YouTube', 'Instagram', 'TikTok'];
+  /// List of platforms with optimized download support
+  static const supportedPlatforms = [
+    'YouTube',
+    'Instagram',
+    'TikTok',
+    'Direct Link',
+    'Any video URL',
+  ];
 
   /// Validates if a string is a valid video URL
   bool isValidUrl(String url) {
@@ -164,7 +170,9 @@ class VideoService {
     } else if (url.endsWith('.mp4') ||
         url.endsWith('.mov') ||
         url.endsWith('.avi') ||
-        url.endsWith('.mkv')) {
+        url.endsWith('.mkv') ||
+        url.endsWith('.m4v') ||
+        url.endsWith('.webm')) {
       return 'direct';
     } else {
       return 'unknown';
@@ -193,20 +201,14 @@ class VideoService {
     }
   }
 
-  /// Downloads a video from a URL
-  /// Only supports YouTube, Instagram, and TikTok URLs
+  /// Downloads a video from a URL.
+  ///
+  /// Supports YouTube, Instagram, TikTok (optimized), direct video URLs,
+  /// and any URL that serves video content or has og:video meta tags.
   Future<String> downloadVideo(
     String url, {
     ProgressCallback? onProgress,
   }) async {
-    // Validate supported platform first
-    if (!isSupportedPlatform(url)) {
-      throw VideoException(
-        'Unsupported platform. Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
-        code: 'UNSUPPORTED_PLATFORM',
-      );
-    }
-
     final urlType = detectUrlType(url);
 
     switch (urlType) {
@@ -216,11 +218,10 @@ class VideoService {
         return await _downloadInstagramVideo(url, onProgress: onProgress);
       case 'tiktok':
         return await _downloadTikTokVideo(url, onProgress: onProgress);
+      case 'direct':
+        return await _downloadDirectVideo(url, onProgress: onProgress);
       default:
-        throw VideoException(
-          'Unsupported platform. Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
-          code: 'UNSUPPORTED_PLATFORM',
-        );
+        return await _downloadUnknownUrl(url, onProgress: onProgress);
     }
   }
 
@@ -453,6 +454,140 @@ class VideoService {
       throw VideoException(
         'Failed to download TikTok video: $e',
         code: 'TIKTOK_DOWNLOAD_FAILED',
+      );
+    }
+  }
+
+  /// Downloads a video from a direct URL (e.g. .mp4, .mov).
+  Future<String> _downloadDirectVideo(
+    String url, {
+    ProgressCallback? onProgress,
+  }) async {
+    _lastVideoTitle = null;
+    _lastVideoDescription = null;
+
+    try {
+      onProgress?.call(0.1, 'Downloading video...');
+      return await _downloadVideoFile(url, onProgress: onProgress);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw VideoException(
+          'This video is private or requires login.',
+          code: 'URL_PRIVATE',
+        );
+      }
+      throw VideoException(
+        'Could not reach this URL. Please check the link and try again.',
+        code: 'URL_UNREACHABLE',
+      );
+    } catch (e) {
+      if (e is VideoException) rethrow;
+      throw VideoException(
+        'Failed to download video: $e',
+        code: 'DIRECT_DOWNLOAD_FAILED',
+      );
+    }
+  }
+
+  /// Probes an unknown URL via HEAD request and attempts to download video.
+  ///
+  /// If Content-Type is video/*, downloads directly. If text/html, fetches
+  /// the page and tries generic og:video extraction. Otherwise throws.
+  Future<String> _downloadUnknownUrl(
+    String url, {
+    ProgressCallback? onProgress,
+  }) async {
+    _lastVideoTitle = null;
+    _lastVideoDescription = null;
+
+    try {
+      onProgress?.call(0.05, 'Checking URL...');
+
+      // HEAD request to probe Content-Type
+      final headResponse = await _dio.head<dynamic>(
+        url,
+        options: Options(
+          headers: {'User-Agent': _mobileUserAgent},
+          followRedirects: true,
+          maxRedirects: 5,
+        ),
+      );
+
+      final contentType =
+          headResponse.headers.value('content-type')?.toLowerCase() ?? '';
+
+      if (contentType.startsWith('video/')) {
+        onProgress?.call(0.1, 'Downloading video...');
+        return await _downloadVideoFile(url, onProgress: onProgress);
+      }
+
+      if (contentType.startsWith('text/html')) {
+        onProgress?.call(0.1, 'Loading page...');
+
+        final response = await _dio.get<String>(
+          url,
+          options: Options(
+            headers: {
+              'User-Agent': _mobileUserAgent,
+              'Accept':
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            },
+            followRedirects: true,
+            maxRedirects: 5,
+          ),
+        );
+
+        final html = response.data;
+        if (html == null || html.isEmpty) {
+          throw VideoException(
+            'Could not extract video from this page. '
+            'The site may require login or block direct access.',
+            code: 'NOT_A_VIDEO',
+          );
+        }
+
+        onProgress?.call(0.3, 'Extracting video URL...');
+
+        final extracted = VideoPageExtractor.extractGenericVideoData(html);
+        if (extracted == null) {
+          throw VideoException(
+            'Could not extract video from this page. '
+            'The site may require login or block direct access.',
+            code: 'NOT_A_VIDEO',
+          );
+        }
+
+        _lastVideoTitle = extracted.title;
+        _lastVideoDescription = extracted.description;
+
+        onProgress?.call(0.4, 'Downloading video...');
+        return await _downloadVideoFile(extracted.videoUrl,
+            onProgress: onProgress);
+      }
+
+      // Content-Type is neither video nor HTML
+      throw VideoException(
+        'Could not extract video from this page. '
+        'The site may require login or block direct access.',
+        code: 'NOT_A_VIDEO',
+      );
+    } on DioException catch (e) {
+      if (e is VideoException) rethrow;
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw VideoException(
+          'This video is private or requires login.',
+          code: 'URL_PRIVATE',
+        );
+      }
+      throw VideoException(
+        'Could not reach this URL. Please check the link and try again.',
+        code: 'URL_UNREACHABLE',
+      );
+    } catch (e) {
+      if (e is VideoException) rethrow;
+      throw VideoException(
+        'Could not reach this URL. Please check the link and try again.',
+        code: 'URL_UNREACHABLE',
       );
     }
   }
