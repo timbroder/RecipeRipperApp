@@ -63,31 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Validates and handles a shared URL
   void _handleSharedUrl(String url) {
-    // Check if it's a supported platform
-    if (!_videoService.isSupportedPlatform(url)) {
-      _showUnsupportedPlatformError();
-      return;
-    }
+    if (!_videoService.isValidUrl(url)) return;
     _openVideoPreview(VideoSource.url(url));
-  }
-
-  /// Shows error dialog for unsupported platforms
-  void _showUnsupportedPlatformError() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unsupported Platform'),
-        content: const Text(
-          'Recipe Slurp only supports videos from YouTube, Instagram, and TikTok.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _loadData() async {
@@ -137,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 title: const Text('Enter Video URL'),
-                subtitle: const Text('YouTube, Instagram, or TikTok'),
+                subtitle: const Text('Video or recipe page'),
                 onTap: () {
                   Navigator.pop(context);
                   _showUrlInputDialog();
@@ -204,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Supported: YouTube, Instagram, TikTok',
+                    'Paste any video or recipe URL',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -226,11 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (!_videoService.isValidUrl(url)) {
                       setDialogState(
                           () => errorText = 'Please enter a valid URL');
-                      return;
-                    }
-                    if (!_videoService.isSupportedPlatform(url)) {
-                      setDialogState(() => errorText =
-                          'Only YouTube, Instagram, and TikTok are supported');
                       return;
                     }
                     Navigator.pop(context);

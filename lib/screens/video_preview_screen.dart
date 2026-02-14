@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:recipe_ripper/models/recipe.dart';
+import 'package:recipe_ripper/providers/recipe_provider.dart';
 import 'package:recipe_ripper/services/video_service.dart';
 import 'processing_screen.dart';
+import 'recipe_detail_screen.dart';
 
-/// Screen for previewing video metadata before processing
+/// Screen for previewing video metadata or web recipe before processing
 class VideoPreviewScreen extends StatefulWidget {
   final VideoSource videoSource;
 
@@ -20,9 +24,12 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   final VideoService _videoService = VideoService();
 
   VideoMetadata? _metadata;
+  Recipe? _webRecipe;
+  String? _extractionMethod;
   bool _isLoading = true;
   // ignore: unused_field
   final bool _isProcessing = false;
+  bool _isSaving = false;
   double _downloadProgress = 0.0;
   String _statusMessage = 'Loading...';
   String? _errorMessage;
@@ -44,14 +51,14 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _webRecipe = null;
+      _extractionMethod = null;
     });
 
     try {
-      String videoPath;
-
       if (widget.videoSource.isUrl) {
-        // Download from URL
-        videoPath = await _videoService.downloadVideo(
+        // Download from URL — may return video or web recipe
+        final result = await _videoService.downloadVideo(
           widget.videoSource.url!,
           onProgress: (progress, status) {
             setState(() {
@@ -60,28 +67,53 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
             });
           },
         );
+
+        switch (result) {
+          case VideoDownloaded(:final filePath):
+            // Extract metadata for video
+            setState(() {
+              _statusMessage = 'Extracting video information...';
+            });
+
+            final metadata = await _videoService.extractMetadata(
+              filePath,
+              sourceUrl: widget.videoSource.url,
+            );
+
+            setState(() {
+              _metadata = metadata;
+              _isLoading = false;
+            });
+
+          case WebRecipeExtracted(:final recipe, :final extractionMethod):
+            setState(() {
+              _webRecipe = recipe;
+              _extractionMethod = extractionMethod;
+              _isLoading = false;
+            });
+        }
       } else {
         // Use local file
-        videoPath = widget.videoSource.filePath!;
+        final videoPath = widget.videoSource.filePath!;
         setState(() {
           _statusMessage = 'Loading video...';
         });
+
+        // Extract metadata
+        setState(() {
+          _statusMessage = 'Extracting video information...';
+        });
+
+        final metadata = await _videoService.extractMetadata(
+          videoPath,
+          sourceUrl: widget.videoSource.url,
+        );
+
+        setState(() {
+          _metadata = metadata;
+          _isLoading = false;
+        });
       }
-
-      // Extract metadata
-      setState(() {
-        _statusMessage = 'Extracting video information...';
-      });
-
-      final metadata = await _videoService.extractMetadata(
-        videoPath,
-        sourceUrl: widget.videoSource.url,
-      );
-
-      setState(() {
-        _metadata = metadata;
-        _isLoading = false;
-      });
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -110,6 +142,37 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     }
   }
 
+  /// Saves a web-extracted recipe to the database
+  Future<void> _saveWebRecipe() async {
+    if (_webRecipe == null || _isSaving) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final provider = context.read<RecipeProvider>();
+      final savedRecipe = await provider.addRecipe(_webRecipe!);
+
+      if (savedRecipe != null && mounted) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => RecipeDetailScreen(recipe: savedRecipe),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save recipe: $e')),
+        );
+      }
+    }
+  }
+
   /// Cancels and goes back
   void _cancel() {
     Navigator.of(context).pop(false);
@@ -119,7 +182,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Preview Video'),
+        title: Text(_webRecipe != null ? 'Preview Recipe' : 'Preview Video'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: _isProcessing ? null : _cancel,
@@ -136,6 +199,10 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
 
     if (_errorMessage != null) {
       return _buildErrorView();
+    }
+
+    if (_webRecipe != null) {
+      return _buildWebRecipePreview();
     }
 
     if (_metadata != null) {
@@ -218,6 +285,188 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebRecipePreview() {
+    final recipe = _webRecipe!;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Placeholder icon
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.article,
+                    size: 64,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Web Recipe',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Recipe Info Card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recipe.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInfoRow(
+                    Icons.restaurant,
+                    'Ingredients',
+                    '${recipe.ingredients.length}',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(
+                    Icons.format_list_numbered,
+                    'Steps',
+                    '${recipe.directions.length}',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(
+                    Icons.auto_awesome,
+                    'Extraction',
+                    _extractionMethod == 'json-ld'
+                        ? 'Structured data (JSON-LD)'
+                        : 'Heuristic analysis',
+                  ),
+                  if (recipe.sourceUrl != null) ...[
+                    const SizedBox(height: 8),
+                    _buildInfoRow(
+                      Icons.link,
+                      'Source',
+                      _getTruncatedUrl(recipe.sourceUrl!),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Ingredient preview
+          if (recipe.ingredients.isNotEmpty) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ingredients Preview',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    ...recipe.ingredients.take(5).map((ingredient) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '\u2022 ',
+                                style: TextStyle(color: colorScheme.primary),
+                              ),
+                              Expanded(
+                                child: Text(ingredient.toDisplayString()),
+                              ),
+                            ],
+                          ),
+                        )),
+                    if (recipe.ingredients.length > 5) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'and ${recipe.ingredients.length - 5} more...',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Success info card
+          Card(
+            color: Colors.green.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Recipe found directly on page \u2014 no video processing needed!',
+                      style: TextStyle(color: Colors.green.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Action Buttons
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _isSaving ? null : _saveWebRecipe,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(_isSaving ? 'Saving...' : 'Save Recipe'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _cancel,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
