@@ -1,55 +1,73 @@
 import 'dart:convert';
 
 /// Prompt templates for LLM recipe extraction.
+///
+/// Prompts are split into instructions (system prompt) and user prompt
+/// to support Foundation Models' separate instructions parameter and
+/// maximize the usable context window.
+///
+/// Output uses flat ingredient strings ("1 cup flour, sifted") instead of
+/// structured objects to save tokens within the 4K context window.
 class LlmPrompts {
-  /// Prompt for full extraction from transcript + OCR + description text.
-  static String fullExtractionPrompt(String text, {String? videoTitle}) {
-    final titleHint =
-        videoTitle != null ? '\nThe video title is: "$videoTitle"\n' : '';
+  // ── Full extraction (transcript + OCR + description) ──
 
-    return '''You are a recipe extraction assistant. Extract a structured recipe from the following text, which comes from a cooking video's transcript, on-screen text (OCR), and description.
-$titleHint
-Return ONLY valid JSON in this exact format (no markdown, no explanation):
-{"title":"Recipe Name","ingredients":[{"quantity":"1","unit":"cup","item":"flour","notes":"sifted"}],"directions":["Preheat oven to 350F.","Mix dry ingredients."]}
-
-Rules:
-- Extract ALL ingredients with quantities, units, and item names when possible
-- Extract ALL cooking directions as clear, imperative steps
-- If quantity is a fraction, write it as a string like "1/2" or "1 1/2"
-- If no unit applies, set unit to null
-- If no notes apply, set notes to null
-- Ignore non-recipe content (greetings, promotions, commentary)
-- If the text contains multiple recipes, extract only the main one
-- Generate a descriptive title if none is obvious
-
-Text to extract from:
-$text''';
+  /// System instructions for full recipe extraction.
+  static String fullExtractionInstructions() {
+    return 'You are a recipe extraction assistant. '
+        'Extract a structured recipe from cooking video text. '
+        'Return ONLY valid JSON: '
+        '{"title":"...","ingredients":["1 cup flour","2 cloves garlic, minced"],"directions":["Step one.","Step two."]} '
+        'Rules: '
+        'Extract ALL ingredients as strings with quantities and units. '
+        'Extract ALL directions as imperative steps. '
+        'Ignore non-recipe content (greetings, promotions, commentary). '
+        'If multiple recipes, extract the main one.';
   }
 
-  /// Prompt for extraction from just the video description (fast path).
-  static String descriptionOnlyPrompt(
+  /// User prompt for full extraction containing just the input text.
+  static String fullExtractionUserPrompt(String text, {String? videoTitle}) {
+    final titleHint =
+        videoTitle != null ? 'Video title: "$videoTitle"\n\n' : '';
+    return '${titleHint}Extract the recipe from this text:\n\n$text';
+  }
+
+  /// Combined prompt for services that don't support separate instructions.
+  static String fullExtractionPrompt(String text, {String? videoTitle}) {
+    return '${fullExtractionInstructions()}\n\n'
+        '${fullExtractionUserPrompt(text, videoTitle: videoTitle)}';
+  }
+
+  // ── Description-only extraction (fast path) ──
+
+  /// System instructions for description-only extraction.
+  static String descriptionOnlyInstructions() {
+    return 'You are a recipe extraction assistant. '
+        'Extract a structured recipe from a video description. '
+        'Return ONLY valid JSON: '
+        '{"title":"...","ingredients":["1 cup flour","2 cloves garlic, minced"],"directions":["Step one.","Step two."]} '
+        'Rules: '
+        'Extract ALL ingredients as strings with quantities and units. '
+        'Extract ALL directions as imperative steps. '
+        'If no recipe is found, return: {"title":null,"ingredients":[],"directions":[]}';
+  }
+
+  /// User prompt for description-only extraction.
+  static String descriptionOnlyUserPrompt(
     String description, {
     String? videoTitle,
   }) {
     final titleHint =
-        videoTitle != null ? '\nThe video title is: "$videoTitle"\n' : '';
+        videoTitle != null ? 'Video title: "$videoTitle"\n\n' : '';
+    return '${titleHint}Video description:\n\n$description';
+  }
 
-    return '''You are a recipe extraction assistant. Extract a structured recipe from the following video description. Video descriptions often contain a full recipe with ingredients and directions.
-$titleHint
-Return ONLY valid JSON in this exact format (no markdown, no explanation):
-{"title":"Recipe Name","ingredients":[{"quantity":"1","unit":"cup","item":"flour","notes":"sifted"}],"directions":["Preheat oven to 350F.","Mix dry ingredients."]}
-
-Rules:
-- Extract ALL ingredients with quantities, units, and item names
-- Extract ALL cooking directions as clear, imperative steps
-- If quantity is a fraction, write it as a string like "1/2" or "1 1/2"
-- If no unit applies, set unit to null
-- If no notes apply, set notes to null
-- Only extract if there is a clear recipe present
-- If no recipe is found, return: {"title":null,"ingredients":[],"directions":[]}
-
-Video description:
-$description''';
+  /// Combined prompt for services that don't support separate instructions.
+  static String descriptionOnlyPrompt(
+    String description, {
+    String? videoTitle,
+  }) {
+    return '${descriptionOnlyInstructions()}\n\n'
+        '${descriptionOnlyUserPrompt(description, videoTitle: videoTitle)}';
   }
 
   /// Parse a JSON response from the LLM, with fallback strategies.

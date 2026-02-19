@@ -12,7 +12,7 @@ import CloudKit
   private var speechRecognitionBridge: SpeechRecognitionBridge?
   private var visionOcrBridge: VisionOcrBridge?
   private var iCloudBridge: ICloudBridge?
-  private var foundationModelsBridge: FoundationModelsBridge?
+  private var foundationModelsBridge: AnyObject?
 
   override func application(
     _ application: UIApplication,
@@ -63,8 +63,11 @@ import CloudKit
     iCloudBridge?.setup(with: controller.binaryMessenger)
 
     // Set up Foundation Models bridge for on-device LLM
-    foundationModelsBridge = FoundationModelsBridge()
-    foundationModelsBridge?.setup(with: controller.binaryMessenger)
+    if #available(iOS 26, *) {
+      let bridge = FoundationModelsBridge()
+      bridge.setup(with: controller.binaryMessenger)
+      foundationModelsBridge = bridge
+    }
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

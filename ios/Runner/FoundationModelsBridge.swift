@@ -1,8 +1,10 @@
 import Flutter
 import UIKit
+import FoundationModels
 
 /// Bridge for Apple Foundation Models (iOS 26+).
 /// Provides on-device LLM text generation via FoundationModels framework.
+@available(iOS 26, *)
 class FoundationModelsBridge: NSObject {
     private var channel: FlutterMethodChannel?
 
@@ -22,7 +24,8 @@ class FoundationModelsBridge: NSObject {
                     result(FlutterError(code: "INVALID_ARGS", message: "Missing prompt", details: nil))
                     return
                 }
-                self?.generateText(prompt: prompt, result: result)
+                let instructions = args["instructions"] as? String
+                self?.generateText(prompt: prompt, instructions: instructions, result: result)
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -30,41 +33,61 @@ class FoundationModelsBridge: NSObject {
     }
 
     private func checkAvailability(result: @escaping FlutterResult) {
-        if #available(iOS 26, *) {
-            // FoundationModels framework available on iOS 26+
-            // Check if the device supports on-device language model
-            result(true)
-        } else {
-            result(false)
+        let availability = SystemLanguageModel.default.availability
+        switch availability {
+        case .available:
+            result(["available": true])
+        case .unavailable(.deviceNotEligible):
+            result(["available": false, "reason": "deviceNotEligible"])
+        case .unavailable(.appleIntelligenceNotEnabled):
+            result(["available": false, "reason": "appleIntelligenceNotEnabled"])
+        case .unavailable(.modelNotReady):
+            result(["available": false, "reason": "modelNotReady"])
+        @unknown default:
+            result(["available": false, "reason": "unknown"])
         }
     }
 
-    private func generateText(prompt: String, result: @escaping FlutterResult) {
-        if #available(iOS 26, *) {
-            Task {
-                do {
-                    // Use FoundationModels framework for on-device generation
-                    // Import: import FoundationModels
-                    // let session = LanguageModelSession()
-                    // let response = try await session.respond(to: prompt)
-                    // result(response.content)
+    private func generateText(prompt: String, instructions: String?, result: @escaping FlutterResult) {
+        Task {
+            do {
+                let session: LanguageModelSession
+                if let instructions = instructions {
+                    session = LanguageModelSession(instructions: instructions)
+                } else {
+                    session = LanguageModelSession()
+                }
 
-                    // NOTE: Actual FoundationModels import and usage requires
-                    // Xcode 26+ and iOS 26 SDK. This bridge is ready for when
-                    // the SDK becomes available. For now, return unavailable.
+                let response = try await session.respond(to: prompt)
+                result(response.content)
+            } catch let error as LanguageModelSession.GenerationError {
+                switch error {
+                case .exceededContextWindowSize:
                     result(FlutterError(
-                        code: "NOT_YET_AVAILABLE",
-                        message: "FoundationModels requires iOS 26 SDK to compile",
+                        code: "CONTEXT_OVERFLOW",
+                        message: "Input exceeded the model's context window size",
+                        details: nil
+                    ))
+                case .guardrailViolation:
+                    result(FlutterError(
+                        code: "GUARDRAIL",
+                        message: "Content was blocked by safety guardrails",
+                        details: nil
+                    ))
+                @unknown default:
+                    result(FlutterError(
+                        code: "GENERATION_ERROR",
+                        message: "Generation failed: \(error.localizedDescription)",
                         details: nil
                     ))
                 }
+            } catch {
+                result(FlutterError(
+                    code: "GENERATION_ERROR",
+                    message: "Generation failed: \(error.localizedDescription)",
+                    details: nil
+                ))
             }
-        } else {
-            result(FlutterError(
-                code: "UNSUPPORTED",
-                message: "Foundation Models requires iOS 26+",
-                details: nil
-            ))
         }
     }
 }
