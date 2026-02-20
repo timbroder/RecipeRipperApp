@@ -6,7 +6,7 @@ void main() {
     group('fullExtractionInstructions', () {
       test('contains extraction rules', () {
         final instructions = LlmPrompts.fullExtractionInstructions();
-        expect(instructions, contains('recipe extraction'));
+        expect(instructions, contains('extract recipes'));
         expect(instructions, contains('JSON'));
         expect(instructions, contains('ingredients'));
         expect(instructions, contains('directions'));
@@ -32,7 +32,7 @@ void main() {
     group('fullExtractionPrompt (combined)', () {
       test('combines instructions and user prompt', () {
         final prompt = LlmPrompts.fullExtractionPrompt('Mix flour and sugar');
-        expect(prompt, contains('recipe extraction'));
+        expect(prompt, contains('extract recipes'));
         expect(prompt, contains('Mix flour and sugar'));
       });
     });
@@ -40,7 +40,7 @@ void main() {
     group('descriptionOnlyInstructions', () {
       test('contains description-specific rules', () {
         final instructions = LlmPrompts.descriptionOnlyInstructions();
-        expect(instructions, contains('video description'));
+        expect(instructions, contains('video descriptions'));
         expect(instructions, contains('JSON'));
       });
     });

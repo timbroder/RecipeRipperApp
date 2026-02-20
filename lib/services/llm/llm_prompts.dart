@@ -6,22 +6,20 @@ import 'dart:convert';
 /// to support Foundation Models' separate instructions parameter and
 /// maximize the usable context window.
 ///
-/// Output uses flat ingredient strings ("1 cup flour, sifted") instead of
+/// Output uses flat ingredient strings ("2 tablespoons olive oil") instead of
 /// structured objects to save tokens within the 4K context window.
 class LlmPrompts {
   // ── Full extraction (transcript + OCR + description) ──
 
   /// System instructions for full recipe extraction.
   static String fullExtractionInstructions() {
-    return 'You are a recipe extraction assistant. '
-        'Extract a structured recipe from cooking video text. '
-        'Return ONLY valid JSON: '
-        '{"title":"...","ingredients":["1 cup flour","2 cloves garlic, minced"],"directions":["Step one.","Step two."]} '
-        'Rules: '
-        'Extract ALL ingredients as strings with quantities and units. '
-        'Extract ALL directions as imperative steps. '
-        'Ignore non-recipe content (greetings, promotions, commentary). '
-        'If multiple recipes, extract the main one.';
+    return 'You extract recipes from cooking video text into JSON. '
+        'Output format: {"title":"NAME","ingredients":["AMOUNT ITEM","AMOUNT ITEM"],"directions":["STEP","STEP"]} '
+        'IMPORTANT: Only include ingredients and directions actually mentioned in the text. '
+        'Do NOT invent or add any ingredients not in the text. '
+        'Include every ingredient mentioned, with quantity and unit when given. '
+        'Directions should be imperative steps. '
+        'Ignore greetings, promotions, and non-recipe content.';
   }
 
   /// User prompt for full extraction containing just the input text.
@@ -41,14 +39,13 @@ class LlmPrompts {
 
   /// System instructions for description-only extraction.
   static String descriptionOnlyInstructions() {
-    return 'You are a recipe extraction assistant. '
-        'Extract a structured recipe from a video description. '
-        'Return ONLY valid JSON: '
-        '{"title":"...","ingredients":["1 cup flour","2 cloves garlic, minced"],"directions":["Step one.","Step two."]} '
-        'Rules: '
-        'Extract ALL ingredients as strings with quantities and units. '
-        'Extract ALL directions as imperative steps. '
-        'If no recipe is found, return: {"title":null,"ingredients":[],"directions":[]}';
+    return 'You extract recipes from video descriptions into JSON. '
+        'Output format: {"title":"NAME","ingredients":["AMOUNT ITEM","AMOUNT ITEM"],"directions":["STEP","STEP"]} '
+        'IMPORTANT: Only include ingredients and directions actually in the text. '
+        'Do NOT invent or add any ingredients not in the text. '
+        'Include every ingredient mentioned, with quantity and unit when given. '
+        'Directions should be imperative steps. '
+        'If no recipe found: {"title":null,"ingredients":[],"directions":[]}';
   }
 
   /// User prompt for description-only extraction.
