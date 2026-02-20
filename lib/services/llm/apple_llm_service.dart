@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'llm_service.dart';
 import 'llm_prompts.dart';
@@ -54,6 +55,14 @@ class AppleLlmService extends LlmService {
     required String instructions,
     required String prompt,
   }) async {
+    // TODO: DEV HARNESS — remove before release
+    debugPrint('=== APPLE LLM REQUEST ===');
+    debugPrint('INSTRUCTIONS (${instructions.length} chars):');
+    debugPrint(instructions);
+    debugPrint('PROMPT (${prompt.length} chars):');
+    debugPrint(prompt);
+    debugPrint('=========================');
+
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
@@ -62,6 +71,11 @@ class AppleLlmService extends LlmService {
           'instructions': instructions,
         },
       );
+
+      // TODO: DEV HARNESS — remove before release
+      debugPrint('=== APPLE LLM RESPONSE ===');
+      debugPrint(response ?? '(null)');
+      debugPrint('==========================');
 
       if (response == null || response.isEmpty) {
         return LlmExtractionResult.failed('Empty response from model');

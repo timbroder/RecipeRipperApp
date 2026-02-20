@@ -15,6 +15,9 @@ void main() async {
   final databaseService = DatabaseService();
   await databaseService.initialize();
 
+  // TODO: DEV HARNESS — remove before release
+  await databaseService.clearAllData();
+
   // Initialize background processing (Android WorkManager, iOS BGTaskScheduler)
   if (Platform.isAndroid || Platform.isIOS) {
     await BackgroundProcessingService.initialize();

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/processing_job.dart';
@@ -85,6 +87,13 @@ class ProcessingService {
       // Step 0: Description-only fast path (YouTube only)
       final llm = _llmService;
       final llmAvailable = llm != null && await llm.isAvailable();
+
+      // TODO: DEV HARNESS — remove before release
+      debugPrint('=== PROCESSING SERVICE ===');
+      debugPrint('LLM: ${llm?.name ?? "none"}, available: $llmAvailable');
+      debugPrint(
+          'Description (${description?.length ?? 0} chars): $description');
+      debugPrint('==========================');
 
       if (description != null && description.isNotEmpty && llmAvailable) {
         await _updateJob(
@@ -181,6 +190,12 @@ class ProcessingService {
 
       audioPath = await _audioService.extractAudio(videoPath);
 
+      // TODO: DEV HARNESS — remove before release
+      final audioFile = File(audioPath);
+      final audioSize = await audioFile.length();
+      debugPrint(
+          '=== AUDIO FILE: $audioSize bytes (${audioSize ~/ 1024} KB) ===');
+
       await _updateJob(
         jobId,
         progress: 0.1,
@@ -193,24 +208,90 @@ class ProcessingService {
         'Transcribing audio to text...',
       );
 
-      // Step 2: Transcribe audio to text
-      final transcriptionResult = await _speechService.transcribeAudio(
+      // Step 2: Request speech permission and transcribe audio to text
+      final hasPermission = await _speechService.requestPermission();
+      if (!hasPermission) {
+        throw Exception(
+          'Speech recognition permission denied. '
+          'Please grant permission in Settings > Privacy & Security > Speech Recognition.',
+        );
+      }
+
+      // Try on-device transcription first
+      var transcriptionResult = await _speechService.transcribeAudio(
         audioPath,
         onProgress: (p) {
-          final overallProgress = 0.1 + (p * 0.35); // 10% - 45%
+          final overallProgress = 0.1 + (p * 0.25); // 10% - 35%
           _updateJob(
             jobId,
             progress: overallProgress,
-            currentStep: 'Transcribing audio... ${(p * 100).toInt()}%',
+            currentStep:
+                'Transcribing audio (on-device)... ${(p * 100).toInt()}%',
           );
           onProgress?.call(
             jobId,
             ProcessingStatus.transcribing,
             overallProgress,
-            'Transcribing audio... ${(p * 100).toInt()}%',
+            'Transcribing audio (on-device)... ${(p * 100).toInt()}%',
           );
         },
       );
+
+      // TODO: DEV HARNESS — remove before release
+      debugPrint('=== ON-DEVICE TRANSCRIPTION ===');
+      debugPrint(
+          'Text (${transcriptionResult.text.length} chars): ${transcriptionResult.text.substring(0, transcriptionResult.text.length.clamp(0, 500))}');
+      debugPrint('Confidence: ${transcriptionResult.confidence}');
+      debugPrint('===============================');
+
+      // If on-device returned empty, retry with server-based recognition
+      if (transcriptionResult.text.trim().isEmpty) {
+        debugPrint(
+            '=== On-device transcription empty, retrying with server ===');
+        await _updateJob(
+          jobId,
+          progress: 0.35,
+          currentStep: 'Retrying transcription (server)...',
+        );
+        onProgress?.call(
+          jobId,
+          ProcessingStatus.transcribing,
+          0.35,
+          'Retrying transcription (server)...',
+        );
+
+        try {
+          transcriptionResult = await _speechService.transcribeAudio(
+            audioPath,
+            requireOnDevice: false,
+            onProgress: (p) {
+              final overallProgress = 0.35 + (p * 0.10); // 35% - 45%
+              _updateJob(
+                jobId,
+                progress: overallProgress,
+                currentStep:
+                    'Transcribing audio (server)... ${(p * 100).toInt()}%',
+              );
+              onProgress?.call(
+                jobId,
+                ProcessingStatus.transcribing,
+                overallProgress,
+                'Transcribing audio (server)... ${(p * 100).toInt()}%',
+              );
+            },
+          );
+
+          // TODO: DEV HARNESS — remove before release
+          debugPrint('=== SERVER TRANSCRIPTION ===');
+          debugPrint(
+              'Text (${transcriptionResult.text.length} chars): ${transcriptionResult.text.substring(0, transcriptionResult.text.length.clamp(0, 500))}');
+          debugPrint('Confidence: ${transcriptionResult.confidence}');
+          debugPrint('============================');
+        } catch (e) {
+          // Server transcription failed — continue with empty transcript
+          debugPrint('=== Server transcription failed: $e ===');
+        }
+      }
 
       final transcript = transcriptionResult.text;
 

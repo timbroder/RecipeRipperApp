@@ -52,11 +52,13 @@ class SpeechTranscriptionService {
   ///
   /// [audioPath] - Path to the audio file (WAV format recommended)
   /// [language] - Language code (default: en-US)
+  /// [requireOnDevice] - Whether to require on-device recognition (default: true)
   /// [onProgress] - Optional callback for progress updates (0.0 to 1.0)
   /// Returns transcription result with text and confidence score
   Future<TranscriptionResult> transcribeAudio(
     String audioPath, {
     String language = 'en-US',
+    bool requireOnDevice = true,
     void Function(double progress)? onProgress,
   }) async {
     // Validate audio file exists
@@ -71,6 +73,7 @@ class SpeechTranscriptionService {
         {
           'audioPath': audioPath,
           'language': language,
+          'requireOnDevice': requireOnDevice,
         },
       );
 

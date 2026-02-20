@@ -9,7 +9,7 @@ import '../models/processing_job.dart';
 
 class DatabaseService {
   static const String _databaseName = 'recipe_ripper.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   static const String tableRecipes = 'recipes';
   static const String tableIngredients = 'ingredients';
@@ -93,6 +93,7 @@ class DatabaseService {
         description TEXT,
         warnings TEXT,
         processing_method TEXT,
+        confidence_score TEXT,
         FOREIGN KEY (recipe_id) REFERENCES $tableRecipes (id) ON DELETE CASCADE
       )
     ''');
@@ -140,6 +141,11 @@ class DatabaseService {
       );
       await db.execute(
         'ALTER TABLE $tableMetadata ADD COLUMN processing_method TEXT',
+      );
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE $tableMetadata ADD COLUMN confidence_score TEXT',
       );
     }
   }

@@ -31,7 +31,8 @@ class SpeechRecognitionBridge: NSObject {
                 return
             }
             let language = args["language"] as? String ?? "en-US"
-            transcribeAudio(audioPath: audioPath, language: language, result: result)
+            let requireOnDevice = args["requireOnDevice"] as? Bool ?? true
+            transcribeAudio(audioPath: audioPath, language: language, requireOnDevice: requireOnDevice, result: result)
         case "isAvailable":
             checkAvailability(result: result)
         default:
@@ -61,7 +62,17 @@ class SpeechRecognitionBridge: NSObject {
     }
 
     /// Transcribe audio file to text
-    private func transcribeAudio(audioPath: String, language: String, result: @escaping FlutterResult) {
+    private func transcribeAudio(audioPath: String, language: String, requireOnDevice: Bool, result: @escaping FlutterResult) {
+        // Log audio file info
+        let fileURL = URL(fileURLWithPath: audioPath)
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: audioPath),
+           let fileSize = attrs[.size] as? Int64 {
+            print("=== SPEECH BRIDGE: Audio file size: \(fileSize) bytes (\(fileSize / 1024) KB)")
+        } else {
+            print("=== SPEECH BRIDGE: WARNING - Could not read audio file attributes at \(audioPath)")
+            print("=== SPEECH BRIDGE: File exists: \(FileManager.default.fileExists(atPath: audioPath))")
+        }
+
         // Check if speech recognition is available
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language)) else {
             result(FlutterError(
@@ -92,37 +103,61 @@ class SpeechRecognitionBridge: NSObject {
         }
 
         // Create recognition request
-        let audioURL = URL(fileURLWithPath: audioPath)
-        let request = SFSpeechURLRecognitionRequest(url: audioURL)
+        let request = SFSpeechURLRecognitionRequest(url: fileURL)
         request.shouldReportPartialResults = false
-        request.requiresOnDeviceRecognition = true // Force on-device processing
+        request.requiresOnDeviceRecognition = requireOnDevice
 
         // Start recognition
+        // TODO: DEV HARNESS — remove before release
+        print("=== SPEECH BRIDGE: Starting recognition for \(audioPath)")
+        print("=== SPEECH BRIDGE: Language: \(language), requireOnDevice: \(requireOnDevice)")
+
+        var hasCalledResult = false
+
         recognizer.recognitionTask(with: request) { recognitionResult, error in
+            // TODO: DEV HARNESS — remove before release
+            print("=== SPEECH BRIDGE: Callback fired - error: \(String(describing: error)), result: \(recognitionResult != nil), isFinal: \(recognitionResult?.isFinal ?? false)")
+
             if let error = error {
-                result(FlutterError(
-                    code: "RECOGNITION_ERROR",
-                    message: "Transcription failed: \(error.localizedDescription)",
-                    details: nil
-                ))
+                print("=== SPEECH BRIDGE: ERROR: \(error.localizedDescription)")
+                if !hasCalledResult {
+                    hasCalledResult = true
+                    result(FlutterError(
+                        code: "RECOGNITION_ERROR",
+                        message: "Transcription failed: \(error.localizedDescription)",
+                        details: nil
+                    ))
+                }
                 return
             }
 
             guard let recognitionResult = recognitionResult else {
-                result(FlutterError(
-                    code: "NO_RESULT",
-                    message: "No transcription result",
-                    details: nil
-                ))
+                print("=== SPEECH BRIDGE: No result object")
+                if !hasCalledResult {
+                    hasCalledResult = true
+                    result(FlutterError(
+                        code: "NO_RESULT",
+                        message: "No transcription result",
+                        details: nil
+                    ))
+                }
                 return
             }
 
             if recognitionResult.isFinal {
                 let transcription = recognitionResult.bestTranscription.formattedString
-                result([
-                    "text": transcription,
-                    "confidence": 1.0, // iOS doesn't provide confidence scores
-                ])
+                let preview = String(transcription.prefix(200))
+                print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars): \(preview)...")
+                if !hasCalledResult {
+                    hasCalledResult = true
+                    result([
+                        "text": transcription,
+                        "confidence": 1.0,
+                    ])
+                }
+            } else {
+                let partial = recognitionResult.bestTranscription.formattedString
+                print("=== SPEECH BRIDGE: Partial (\(partial.count) chars)")
             }
         }
     }
