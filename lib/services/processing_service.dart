@@ -217,83 +217,32 @@ class ProcessingService {
         );
       }
 
-      // Try on-device transcription first
-      var transcriptionResult = await _speechService.transcribeAudio(
+      final transcriptionResult = await _speechService.transcribeAudio(
         audioPath,
         onProgress: (p) {
-          final overallProgress = 0.1 + (p * 0.25); // 10% - 35%
+          final overallProgress = 0.1 + (p * 0.35); // 10% - 45%
           _updateJob(
             jobId,
             progress: overallProgress,
-            currentStep:
-                'Transcribing audio (on-device)... ${(p * 100).toInt()}%',
+            currentStep: 'Transcribing audio... ${(p * 100).toInt()}%',
           );
           onProgress?.call(
             jobId,
             ProcessingStatus.transcribing,
             overallProgress,
-            'Transcribing audio (on-device)... ${(p * 100).toInt()}%',
+            'Transcribing audio... ${(p * 100).toInt()}%',
           );
         },
       );
 
-      // TODO: DEV HARNESS — remove before release
-      debugPrint('=== ON-DEVICE TRANSCRIPTION ===');
-      debugPrint(
-          'Text (${transcriptionResult.text.length} chars): ${transcriptionResult.text.substring(0, transcriptionResult.text.length.clamp(0, 500))}');
-      debugPrint('Confidence: ${transcriptionResult.confidence}');
-      debugPrint('===============================');
-
-      // If on-device returned empty, retry with server-based recognition
-      if (transcriptionResult.text.trim().isEmpty) {
-        debugPrint(
-            '=== On-device transcription empty, retrying with server ===');
-        await _updateJob(
-          jobId,
-          progress: 0.35,
-          currentStep: 'Retrying transcription (server)...',
-        );
-        onProgress?.call(
-          jobId,
-          ProcessingStatus.transcribing,
-          0.35,
-          'Retrying transcription (server)...',
-        );
-
-        try {
-          transcriptionResult = await _speechService.transcribeAudio(
-            audioPath,
-            requireOnDevice: false,
-            onProgress: (p) {
-              final overallProgress = 0.35 + (p * 0.10); // 35% - 45%
-              _updateJob(
-                jobId,
-                progress: overallProgress,
-                currentStep:
-                    'Transcribing audio (server)... ${(p * 100).toInt()}%',
-              );
-              onProgress?.call(
-                jobId,
-                ProcessingStatus.transcribing,
-                overallProgress,
-                'Transcribing audio (server)... ${(p * 100).toInt()}%',
-              );
-            },
-          );
-
-          // TODO: DEV HARNESS — remove before release
-          debugPrint('=== SERVER TRANSCRIPTION ===');
-          debugPrint(
-              'Text (${transcriptionResult.text.length} chars): ${transcriptionResult.text.substring(0, transcriptionResult.text.length.clamp(0, 500))}');
-          debugPrint('Confidence: ${transcriptionResult.confidence}');
-          debugPrint('============================');
-        } catch (e) {
-          // Server transcription failed — continue with empty transcript
-          debugPrint('=== Server transcription failed: $e ===');
-        }
-      }
-
       final transcript = transcriptionResult.text;
+
+      // TODO: DEV HARNESS — remove before release
+      debugPrint('=== TRANSCRIPTION RESULT ===');
+      debugPrint(
+          'Text (${transcript.length} chars): ${transcript.substring(0, transcript.length.clamp(0, 500))}');
+      debugPrint('Confidence: ${transcriptionResult.confidence}');
+      debugPrint('============================');
 
       // Step 3: Extract frames from video
       await _updateJob(

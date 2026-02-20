@@ -31,8 +31,7 @@ class SpeechRecognitionBridge: NSObject {
                 return
             }
             let language = args["language"] as? String ?? "en-US"
-            let requireOnDevice = args["requireOnDevice"] as? Bool ?? true
-            transcribeAudio(audioPath: audioPath, language: language, requireOnDevice: requireOnDevice, result: result)
+            transcribeAudio(audioPath: audioPath, language: language, result: result)
         case "isAvailable":
             checkAvailability(result: result)
         default:
@@ -62,15 +61,29 @@ class SpeechRecognitionBridge: NSObject {
     }
 
     /// Transcribe audio file to text
-    private func transcribeAudio(audioPath: String, language: String, requireOnDevice: Bool, result: @escaping FlutterResult) {
-        // Log audio file info
+    private func transcribeAudio(audioPath: String, language: String, result: @escaping FlutterResult) {
         let fileURL = URL(fileURLWithPath: audioPath)
+
+        // TODO: DEV HARNESS — remove before release
+        // Log audio file info
         if let attrs = try? FileManager.default.attributesOfItem(atPath: audioPath),
            let fileSize = attrs[.size] as? Int64 {
-            print("=== SPEECH BRIDGE: Audio file size: \(fileSize) bytes (\(fileSize / 1024) KB)")
+            print("=== SPEECH BRIDGE: Audio file: \(fileSize) bytes (\(fileSize / 1024) KB)")
         } else {
-            print("=== SPEECH BRIDGE: WARNING - Could not read audio file attributes at \(audioPath)")
+            print("=== SPEECH BRIDGE: WARNING - Cannot read file at \(audioPath)")
             print("=== SPEECH BRIDGE: File exists: \(FileManager.default.fileExists(atPath: audioPath))")
+        }
+
+        // Log audio duration via AVAudioFile
+        do {
+            let audioFile = try AVAudioFile(forReading: fileURL)
+            let frames = audioFile.length
+            let sampleRate = audioFile.processingFormat.sampleRate
+            let channels = audioFile.processingFormat.channelCount
+            let duration = Double(frames) / sampleRate
+            print("=== SPEECH BRIDGE: Audio duration: \(String(format: "%.1f", duration))s, sampleRate: \(sampleRate), channels: \(channels)")
+        } catch {
+            print("=== SPEECH BRIDGE: WARNING - Cannot read audio format: \(error.localizedDescription)")
         }
 
         // Check if speech recognition is available
@@ -102,15 +115,19 @@ class SpeechRecognitionBridge: NSObject {
             return
         }
 
+        // TODO: DEV HARNESS — remove before release
+        print("=== SPEECH BRIDGE: supportsOnDeviceRecognition: \(recognizer.supportsOnDeviceRecognition)")
+
         // Create recognition request
         let request = SFSpeechURLRecognitionRequest(url: fileURL)
         request.shouldReportPartialResults = false
-        request.requiresOnDeviceRecognition = requireOnDevice
+        request.requiresOnDeviceRecognition = true
+        request.taskHint = .dictation  // Better for continuous speech like recipe narration
+        request.addsPunctuation = true
 
-        // Start recognition
         // TODO: DEV HARNESS — remove before release
         print("=== SPEECH BRIDGE: Starting recognition for \(audioPath)")
-        print("=== SPEECH BRIDGE: Language: \(language), requireOnDevice: \(requireOnDevice)")
+        print("=== SPEECH BRIDGE: Language: \(language), onDevice: true, taskHint: dictation")
 
         var hasCalledResult = false
 
@@ -119,13 +136,16 @@ class SpeechRecognitionBridge: NSObject {
             print("=== SPEECH BRIDGE: Callback fired - error: \(String(describing: error)), result: \(recognitionResult != nil), isFinal: \(recognitionResult?.isFinal ?? false)")
 
             if let error = error {
+                let nsError = error as NSError
                 print("=== SPEECH BRIDGE: ERROR: \(error.localizedDescription)")
+                print("=== SPEECH BRIDGE: ERROR domain: \(nsError.domain), code: \(nsError.code)")
+                print("=== SPEECH BRIDGE: ERROR userInfo: \(nsError.userInfo)")
                 if !hasCalledResult {
                     hasCalledResult = true
                     result(FlutterError(
                         code: "RECOGNITION_ERROR",
                         message: "Transcription failed: \(error.localizedDescription)",
-                        details: nil
+                        details: "domain=\(nsError.domain) code=\(nsError.code)"
                     ))
                 }
                 return
@@ -146,8 +166,9 @@ class SpeechRecognitionBridge: NSObject {
 
             if recognitionResult.isFinal {
                 let transcription = recognitionResult.bestTranscription.formattedString
+                let segmentCount = recognitionResult.bestTranscription.segments.count
                 let preview = String(transcription.prefix(200))
-                print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars): \(preview)...")
+                print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars, \(segmentCount) segments): \(preview)...")
                 if !hasCalledResult {
                     hasCalledResult = true
                     result([
