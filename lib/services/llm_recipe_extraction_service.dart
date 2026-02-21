@@ -103,6 +103,10 @@ class LlmRecipeExtractionService {
       videoTitle: videoTitle,
     );
 
+    // TODO: DEV HARNESS — remove before release
+    debugPrint(
+        '=== LLM EXTRACTION: success=${result.success}, error=${result.error}, ingredients=${result.ingredients.length}, directions=${result.directions.length}');
+
     // If context overflow, retry with more aggressive truncation
     if (!result.success && result.error == 'context_overflow') {
       final shorter = _buildTruncatedInput(

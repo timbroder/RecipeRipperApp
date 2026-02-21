@@ -130,26 +130,30 @@ class SpeechRecognitionBridge: NSObject {
         print("=== SPEECH BRIDGE: Language: \(language), onDevice: true, taskHint: dictation")
 
         var hasCalledResult = false
-        // Track best partial result — on-device recognizer sometimes returns empty
-        // final result despite producing valid partial results
-        var bestPartialText = ""
+        // The on-device recognizer processes audio in segments. Each segment's
+        // partial results build up independently (e.g., 3→558 chars, then resets
+        // to 4→279 chars for the next segment). The final isFinal=true callback
+        // often returns empty text. We accumulate all segments to get the full
+        // transcript.
+        var completedSegments: [String] = []
+        var currentSegmentBest = ""
+        var previousPartialCount = 0
 
         recognizer.recognitionTask(with: request) { recognitionResult, error in
-            // TODO: DEV HARNESS — remove before release
-            print("=== SPEECH BRIDGE: Callback fired - error: \(String(describing: error)), result: \(recognitionResult != nil), isFinal: \(recognitionResult?.isFinal ?? false)")
-
             if let error = error {
                 let nsError = error as NSError
-                print("=== SPEECH BRIDGE: ERROR: \(error.localizedDescription)")
-                print("=== SPEECH BRIDGE: ERROR domain: \(nsError.domain), code: \(nsError.code)")
-                print("=== SPEECH BRIDGE: ERROR userInfo: \(nsError.userInfo)")
+                print("=== SPEECH BRIDGE: ERROR: \(error.localizedDescription) domain=\(nsError.domain) code=\(nsError.code)")
                 if !hasCalledResult {
                     hasCalledResult = true
-                    // Even on error, return best partial if we have one
-                    if !bestPartialText.isEmpty {
-                        print("=== SPEECH BRIDGE: Error occurred but returning best partial (\(bestPartialText.count) chars)")
+                    // On error, return accumulated segments if we have them
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    if !fullText.isEmpty {
+                        print("=== SPEECH BRIDGE: Error but returning accumulated text (\(fullText.count) chars, \(completedSegments.count) segments)")
                         result([
-                            "text": bestPartialText,
+                            "text": fullText,
                             "confidence": 0.8,
                         ])
                     } else {
@@ -164,15 +168,14 @@ class SpeechRecognitionBridge: NSObject {
             }
 
             guard let recognitionResult = recognitionResult else {
-                print("=== SPEECH BRIDGE: No result object")
                 if !hasCalledResult {
                     hasCalledResult = true
-                    if !bestPartialText.isEmpty {
-                        print("=== SPEECH BRIDGE: No result but returning best partial (\(bestPartialText.count) chars)")
-                        result([
-                            "text": bestPartialText,
-                            "confidence": 0.8,
-                        ])
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    if !fullText.isEmpty {
+                        result(["text": fullText, "confidence": 0.8])
                     } else {
                         result(FlutterError(
                             code: "NO_RESULT",
@@ -184,37 +187,45 @@ class SpeechRecognitionBridge: NSObject {
                 return
             }
 
-            // Always capture the longest partial text as fallback
             let currentText = recognitionResult.bestTranscription.formattedString
-            if currentText.count > bestPartialText.count {
-                bestPartialText = currentText
+
+            // Detect segment boundary: when partial length drops significantly,
+            // the recognizer has started a new audio segment
+            if currentText.count < currentSegmentBest.count / 2 && currentSegmentBest.count > 20 {
+                completedSegments.append(currentSegmentBest)
+                print("=== SPEECH BRIDGE: Segment \(completedSegments.count) completed (\(currentSegmentBest.count) chars)")
+                currentSegmentBest = currentText
+                previousPartialCount = currentText.count
+            } else if currentText.count >= currentSegmentBest.count {
+                currentSegmentBest = currentText
+                previousPartialCount = currentText.count
             }
 
             if recognitionResult.isFinal {
                 let transcription = recognitionResult.bestTranscription.formattedString
-                let segmentCount = recognitionResult.bestTranscription.segments.count
-                let preview = String(transcription.prefix(200))
-                print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars, \(segmentCount) segments): \(preview)...")
 
-                // Use best partial as fallback if final result is empty
-                let outputText: String
-                if transcription.isEmpty && !bestPartialText.isEmpty {
-                    print("=== SPEECH BRIDGE: Final was empty, using best partial (\(bestPartialText.count) chars)")
-                    outputText = bestPartialText
+                // Finalize: use final text if non-empty, otherwise use accumulated segments
+                if !transcription.isEmpty {
+                    print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars)")
+                    if !hasCalledResult {
+                        hasCalledResult = true
+                        result(["text": transcription, "confidence": 1.0])
+                    }
                 } else {
-                    outputText = transcription
+                    // Final was empty — use accumulated segments
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    print("=== SPEECH BRIDGE: Final empty, using \(completedSegments.count) accumulated segments (\(fullText.count) chars)")
+                    if !hasCalledResult {
+                        hasCalledResult = true
+                        result([
+                            "text": fullText,
+                            "confidence": fullText.isEmpty ? 0.0 : 0.9,
+                        ])
+                    }
                 }
-
-                if !hasCalledResult {
-                    hasCalledResult = true
-                    result([
-                        "text": outputText,
-                        "confidence": transcription.isEmpty ? 0.8 : 1.0,
-                    ])
-                }
-            } else {
-                let partial = recognitionResult.bestTranscription.formattedString
-                print("=== SPEECH BRIDGE: Partial (\(partial.count) chars), bestPartial: \(bestPartialText.count) chars")
             }
         }
     }
