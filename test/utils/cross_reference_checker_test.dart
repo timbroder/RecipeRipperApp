@@ -262,9 +262,10 @@ void main() {
     });
 
     group('deduplication', () {
-      test('skips multi-word food word if any component is in ingredients', () {
+      test('skips multi-word item when keyword component is in ingredient text',
+          () {
         // "lemon juice" in directions should not be auto-added when
-        // "Juice of 1 lemon" is already an ingredient (contains "lemon")
+        // "Juice of 1 lemon" already covers it (ingredient text contains "lemon")
         final ingredients = [
           Ingredient(item: 'Juice of 1 lemon', order: 0),
           Ingredient(item: 'flour', order: 1),
@@ -336,6 +337,67 @@ void main() {
           result.autoAddedIngredients.map((i) => i.item),
           isNot(contains('cream')),
         );
+      });
+    });
+
+    group('sourceText cross-referencing', () {
+      test('auto-adds food words from raw source text', () {
+        // The transcript may mention "beans" even if the LLM directions
+        // only say "edamame pasta"
+        final ingredients = [
+          Ingredient(item: 'edamame pasta', order: 0),
+          Ingredient(item: 'broccoli', order: 1),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Cook the edamame pasta'),
+          Direction(stepNumber: 2, text: 'Add broccoli'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          sourceText:
+              'I have some beans and broccoli. Using edamame pasta today.',
+        );
+
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          contains('bean'),
+        );
+      });
+
+      test('does not duplicate ingredients already present', () {
+        final ingredients = [
+          Ingredient(item: 'broccoli', order: 0),
+          Ingredient(item: 'pasta', order: 1),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Cook the broccoli and pasta'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          sourceText: 'I love broccoli and pasta together',
+        );
+
+        expect(result.autoAddedIngredients, isEmpty);
+      });
+
+      test('handles null sourceText gracefully', () {
+        final ingredients = [
+          Ingredient(item: 'flour', order: 0),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Mix the flour'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          sourceText: null,
+        );
+        expect(result.missingIngredients, isEmpty);
       });
     });
   });

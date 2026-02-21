@@ -177,11 +177,16 @@ class CrossReferenceChecker {
   }
 
   /// Check cross-references between ingredients and directions.
-  /// Optionally accepts a [title] to extract food words from the recipe title.
+  ///
+  /// Optionally accepts:
+  /// - [title] to extract food words from the recipe title
+  /// - [sourceText] raw transcript/description text to find food words
+  ///   the LLM may have mentioned but not included in directions
   static CrossReferenceResult check({
     required List<Ingredient> ingredients,
     required List<Direction> directions,
     String? title,
+    String? sourceText,
   }) {
     if (ingredients.isEmpty || directions.isEmpty) {
       return CrossReferenceResult(
@@ -199,11 +204,17 @@ class CrossReferenceChecker {
 
     // Combine all direction text
     final directionsText = directions.map((d) => d.text).join(' ');
-    final directionFoodWords = _extractFoodWords(directionsText);
+    final allFoodWords = _extractFoodWords(directionsText);
 
     // Also extract food words from the title
     if (title != null && title.isNotEmpty) {
-      directionFoodWords.addAll(_extractFoodWords(title));
+      allFoodWords.addAll(_extractFoodWords(title));
+    }
+
+    // Also extract food words from raw source text (transcript/description)
+    // This catches ingredients the LLM mentioned but didn't put in directions
+    if (sourceText != null && sourceText.isNotEmpty) {
+      allFoodWords.addAll(_extractFoodWords(sourceText));
     }
 
     // Build a set of all ingredient food words
@@ -219,7 +230,7 @@ class CrossReferenceChecker {
     // Find unused ingredients (in ingredient list but not in directions)
     for (final ingredient in ingredients) {
       final words = ingredientWordMap[ingredient.item] ?? {};
-      final isUsed = words.any((w) => directionFoodWords.contains(w)) ||
+      final isUsed = words.any((w) => allFoodWords.contains(w)) ||
           _textMentionsItem(directionsText, ingredient.item);
       if (!isUsed) {
         unusedIngredients.add(ingredient.item);
@@ -231,20 +242,33 @@ class CrossReferenceChecker {
     final allIngredientText =
         ingredients.map((i) => i.item.toLowerCase()).join(' | ');
 
-    // Find missing ingredients (mentioned in directions but not in ingredients)
-    for (final word in directionFoodWords) {
+    // Find missing ingredients (mentioned in text but not in ingredients)
+    for (final word in allFoodWords) {
       // Skip if any ingredient already covers this word
       if (allIngredientFoodWords.contains(word)) continue;
 
       // Skip if this word appears in any existing ingredient's item text
       if (_wordAppearsInIngredientText(word, allIngredientText)) continue;
 
-      // Skip multi-word items if any component word is already covered
-      // by existing ingredients (e.g., "lemon juice" when "lemon" exists)
+      // Skip multi-word items if all their component words are covered
       if (word.contains(' ')) {
         final parts = word.split(' ');
         if (parts
-            .any((p) => allIngredientFoodWords.contains(_singularize(p)))) {
+            .every((p) => allIngredientFoodWords.contains(_singularize(p)))) {
+          continue;
+        }
+        // Also skip if any keyword component appears in ingredient text
+        // (e.g., "lemon juice" when ingredient is "Juice of 1 lemon")
+        final keywordParts = parts.where(
+          (p) =>
+              IngredientClassifier.ingredientKeywords.contains(p) ||
+              IngredientClassifier.ingredientKeywords.contains(_singularize(p)),
+        );
+        if (keywordParts.isNotEmpty &&
+            keywordParts.any(
+              (p) => _wordAppearsInIngredientText(
+                  _singularize(p), allIngredientText),
+            )) {
           continue;
         }
       }

@@ -114,6 +114,9 @@ class LlmRecipeExtractionService {
       processingMethod: 'llm_full',
       description: description,
       existingMetadata: existingMetadata,
+      sourceText: [transcript, ocrText, description]
+          .where((s) => s != null && s.isNotEmpty)
+          .join(' '),
     );
   }
 
@@ -185,6 +188,7 @@ class LlmRecipeExtractionService {
     required String processingMethod,
     String? description,
     RecipeMetadata? existingMetadata,
+    String? sourceText,
   }) {
     // Parse title
     final title = result.title ?? videoTitle ?? 'Untitled Recipe';
@@ -238,11 +242,12 @@ class LlmRecipeExtractionService {
       ));
     }
 
-    // Cross-reference check (include title for food word extraction)
+    // Cross-reference check (include title and raw source text)
     final crossRef = CrossReferenceChecker.check(
       ingredients: ingredients,
       directions: directions,
       title: title,
+      sourceText: sourceText,
     );
 
     // Merge auto-added ingredients
