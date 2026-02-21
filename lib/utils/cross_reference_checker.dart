@@ -70,6 +70,9 @@ class CrossReferenceChecker {
     'all purpose flour',
     'bread flour',
     'whole wheat flour',
+    'edamame pasta',
+    'nutritional yeast',
+    'green beans',
   };
 
   /// Normalize a word to its singular form for matching.
@@ -174,9 +177,11 @@ class CrossReferenceChecker {
   }
 
   /// Check cross-references between ingredients and directions.
+  /// Optionally accepts a [title] to extract food words from the recipe title.
   static CrossReferenceResult check({
     required List<Ingredient> ingredients,
     required List<Direction> directions,
+    String? title,
   }) {
     if (ingredients.isEmpty || directions.isEmpty) {
       return CrossReferenceResult(
@@ -195,6 +200,11 @@ class CrossReferenceChecker {
     // Combine all direction text
     final directionsText = directions.map((d) => d.text).join(' ');
     final directionFoodWords = _extractFoodWords(directionsText);
+
+    // Also extract food words from the title
+    if (title != null && title.isNotEmpty) {
+      directionFoodWords.addAll(_extractFoodWords(title));
+    }
 
     // Build a set of all ingredient food words
     final allIngredientFoodWords = <String>{};

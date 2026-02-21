@@ -238,10 +238,11 @@ class LlmRecipeExtractionService {
       ));
     }
 
-    // Cross-reference check
+    // Cross-reference check (include title for food word extraction)
     final crossRef = CrossReferenceChecker.check(
       ingredients: ingredients,
       directions: directions,
+      title: title,
     );
 
     // Merge auto-added ingredients

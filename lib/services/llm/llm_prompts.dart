@@ -18,6 +18,8 @@ class LlmPrompts {
         'IMPORTANT: Only include ingredients and directions actually mentioned in the text. '
         'Do NOT invent or add any ingredients not in the text. '
         'Include every ingredient mentioned, with quantity and unit when given. '
+        'Include the main protein, vegetable, and starch/grain of the dish as ingredients even if no exact quantity is stated — use reasonable defaults or omit the quantity. '
+        'Use the video title as context for what the dish is. '
         'Directions should be imperative steps. '
         'Ignore greetings, promotions, and non-recipe content.';
   }
@@ -44,6 +46,8 @@ class LlmPrompts {
         'IMPORTANT: Only include ingredients and directions actually in the text. '
         'Do NOT invent or add any ingredients not in the text. '
         'Include every ingredient mentioned, with quantity and unit when given. '
+        'Include the main protein, vegetable, and starch/grain of the dish as ingredients even if no exact quantity is stated — use reasonable defaults or omit the quantity. '
+        'Use the video title as context for what the dish is. '
         'Directions should be imperative steps. '
         'If no recipe found: {"title":null,"ingredients":[],"directions":[]}';
   }

@@ -165,5 +165,100 @@ void main() {
         expect(result.unusedIngredients, isEmpty);
       });
     });
+
+    group('title-based cross-referencing', () {
+      test('auto-adds food words from title missing in ingredients', () {
+        final ingredients = [
+          Ingredient(item: 'cream', order: 0),
+          Ingredient(item: 'cheese', order: 1),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Melt cream and cheese together'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: 'Cream of Broccoli Pasta',
+        );
+
+        expect(result.missingIngredients, contains('broccoli'));
+        expect(result.missingIngredients, contains('pasta'));
+        expect(result.autoAddedIngredients.length, greaterThanOrEqualTo(2));
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          contains('broccoli'),
+        );
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          contains('pasta'),
+        );
+      });
+
+      test('does not duplicate ingredients already in the list', () {
+        final ingredients = [
+          Ingredient(item: 'broccoli', order: 0),
+          Ingredient(item: 'pasta', order: 1),
+          Ingredient(item: 'cream', order: 2),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Cook the broccoli and pasta'),
+          Direction(stepNumber: 2, text: 'Add cream'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: 'Cream of Broccoli Pasta',
+        );
+
+        expect(result.missingIngredients, isEmpty);
+        expect(result.autoAddedIngredients, isEmpty);
+      });
+
+      test('handles null or empty title gracefully', () {
+        final ingredients = [
+          Ingredient(item: 'flour', order: 0),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Mix the flour'),
+        ];
+
+        final resultNull = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: null,
+        );
+        expect(resultNull.missingIngredients, isEmpty);
+
+        final resultEmpty = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: '',
+        );
+        expect(resultEmpty.missingIngredients, isEmpty);
+      });
+
+      test('detects multi-word items from title', () {
+        final ingredients = [
+          Ingredient(item: 'chicken', order: 0),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Cook the chicken'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: 'Chicken with Green Beans',
+        );
+
+        expect(result.missingIngredients, contains('green beans'));
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          contains('green beans'),
+        );
+      });
+    });
   });
 }
