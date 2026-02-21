@@ -64,28 +64,6 @@ class SpeechRecognitionBridge: NSObject {
     private func transcribeAudio(audioPath: String, language: String, result: @escaping FlutterResult) {
         let fileURL = URL(fileURLWithPath: audioPath)
 
-        // TODO: DEV HARNESS — remove before release
-        // Log audio file info
-        if let attrs = try? FileManager.default.attributesOfItem(atPath: audioPath),
-           let fileSize = attrs[.size] as? Int64 {
-            print("=== SPEECH BRIDGE: Audio file: \(fileSize) bytes (\(fileSize / 1024) KB)")
-        } else {
-            print("=== SPEECH BRIDGE: WARNING - Cannot read file at \(audioPath)")
-            print("=== SPEECH BRIDGE: File exists: \(FileManager.default.fileExists(atPath: audioPath))")
-        }
-
-        // Log audio duration via AVAudioFile
-        do {
-            let audioFile = try AVAudioFile(forReading: fileURL)
-            let frames = audioFile.length
-            let sampleRate = audioFile.processingFormat.sampleRate
-            let channels = audioFile.processingFormat.channelCount
-            let duration = Double(frames) / sampleRate
-            print("=== SPEECH BRIDGE: Audio duration: \(String(format: "%.1f", duration))s, sampleRate: \(sampleRate), channels: \(channels)")
-        } catch {
-            print("=== SPEECH BRIDGE: WARNING - Cannot read audio format: \(error.localizedDescription)")
-        }
-
         // Check if speech recognition is available
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language)) else {
             result(FlutterError(
@@ -115,19 +93,12 @@ class SpeechRecognitionBridge: NSObject {
             return
         }
 
-        // TODO: DEV HARNESS — remove before release
-        print("=== SPEECH BRIDGE: supportsOnDeviceRecognition: \(recognizer.supportsOnDeviceRecognition)")
-
         // Create recognition request
         let request = SFSpeechURLRecognitionRequest(url: fileURL)
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = true
         request.taskHint = .dictation  // Better for continuous speech like recipe narration
         request.addsPunctuation = true
-
-        // TODO: DEV HARNESS — remove before release
-        print("=== SPEECH BRIDGE: Starting recognition for \(audioPath)")
-        print("=== SPEECH BRIDGE: Language: \(language), onDevice: true, taskHint: dictation")
 
         var hasCalledResult = false
         // The on-device recognizer processes audio in segments. Each segment's
@@ -137,12 +108,9 @@ class SpeechRecognitionBridge: NSObject {
         // transcript.
         var completedSegments: [String] = []
         var currentSegmentBest = ""
-        var previousPartialCount = 0
 
         recognizer.recognitionTask(with: request) { recognitionResult, error in
             if let error = error {
-                let nsError = error as NSError
-                print("=== SPEECH BRIDGE: ERROR: \(error.localizedDescription) domain=\(nsError.domain) code=\(nsError.code)")
                 if !hasCalledResult {
                     hasCalledResult = true
                     // On error, return accumulated segments if we have them
@@ -151,12 +119,12 @@ class SpeechRecognitionBridge: NSObject {
                     }
                     let fullText = completedSegments.joined(separator: " ")
                     if !fullText.isEmpty {
-                        print("=== SPEECH BRIDGE: Error but returning accumulated text (\(fullText.count) chars, \(completedSegments.count) segments)")
                         result([
                             "text": fullText,
                             "confidence": 0.8,
                         ])
                     } else {
+                        let nsError = error as NSError
                         result(FlutterError(
                             code: "RECOGNITION_ERROR",
                             message: "Transcription failed: \(error.localizedDescription)",
@@ -193,12 +161,9 @@ class SpeechRecognitionBridge: NSObject {
             // the recognizer has started a new audio segment
             if currentText.count < currentSegmentBest.count / 2 && currentSegmentBest.count > 20 {
                 completedSegments.append(currentSegmentBest)
-                print("=== SPEECH BRIDGE: Segment \(completedSegments.count) completed (\(currentSegmentBest.count) chars)")
                 currentSegmentBest = currentText
-                previousPartialCount = currentText.count
             } else if currentText.count >= currentSegmentBest.count {
                 currentSegmentBest = currentText
-                previousPartialCount = currentText.count
             }
 
             if recognitionResult.isFinal {
@@ -206,7 +171,6 @@ class SpeechRecognitionBridge: NSObject {
 
                 // Finalize: use final text if non-empty, otherwise use accumulated segments
                 if !transcription.isEmpty {
-                    print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars)")
                     if !hasCalledResult {
                         hasCalledResult = true
                         result(["text": transcription, "confidence": 1.0])
@@ -217,7 +181,6 @@ class SpeechRecognitionBridge: NSObject {
                         completedSegments.append(currentSegmentBest)
                     }
                     let fullText = completedSegments.joined(separator: " ")
-                    print("=== SPEECH BRIDGE: Final empty, using \(completedSegments.count) accumulated segments (\(fullText.count) chars)")
                     if !hasCalledResult {
                         hasCalledResult = true
                         result([

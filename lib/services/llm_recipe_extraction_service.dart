@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../models/recipe.dart';
 import '../models/ingredient.dart';
 import '../models/direction.dart';
@@ -41,12 +40,6 @@ class LlmRecipeExtractionService {
     // Truncate if needed (descriptions are usually short, but just in case)
     final truncated = _truncateText(filtered, _maxInputChars);
 
-    // TODO: DEV HARNESS — remove before release
-    debugPrint('=== DESCRIPTION-ONLY INPUT ===');
-    debugPrint('Raw (${description.length} chars): $description');
-    debugPrint('Filtered (${filtered.length} chars): $filtered');
-    debugPrint('==============================');
-
     // Call LLM
     final result = await llmService.extractRecipeFromDescription(
       truncated,
@@ -88,24 +81,11 @@ class LlmRecipeExtractionService {
 
     if (combinedText == null) return null;
 
-    // TODO: DEV HARNESS — remove before release
-    debugPrint('=== FULL LLM INPUT ===');
-    debugPrint('Transcript (${transcript?.length ?? 0} chars)');
-    debugPrint('OCR (${ocrText?.length ?? 0} chars)');
-    debugPrint('Description (${description?.length ?? 0} chars)');
-    debugPrint('Combined (${combinedText.length} chars):');
-    debugPrint(combinedText);
-    debugPrint('======================');
-
     // Call LLM
     var result = await llmService.extractRecipe(
       combinedText,
       videoTitle: videoTitle,
     );
-
-    // TODO: DEV HARNESS — remove before release
-    debugPrint(
-        '=== LLM EXTRACTION: success=${result.success}, error=${result.error}, ingredients=${result.ingredients.length}, directions=${result.directions.length}');
 
     // If context overflow, retry with more aggressive truncation
     if (!result.success && result.error == 'context_overflow') {

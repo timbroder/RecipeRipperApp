@@ -149,10 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Shows dialog to input video URL
   void _showUrlInputDialog() {
-    // TODO: DEV HARNESS — remove before release
-    final urlController = TextEditingController(
-      text: 'https://youtube.com/shorts/K6wEWWhJf7Q?si=8zdtIoq0jQYXCR9Q',
-    );
+    final urlController = TextEditingController();
     String? errorText;
 
     showDialog(

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'llm_service.dart';
 import 'llm_prompts.dart';
@@ -55,14 +54,6 @@ class AppleLlmService extends LlmService {
     required String instructions,
     required String prompt,
   }) async {
-    // TODO: DEV HARNESS — remove before release
-    debugPrint('=== APPLE LLM REQUEST ===');
-    debugPrint('INSTRUCTIONS (${instructions.length} chars):');
-    debugPrint(instructions);
-    debugPrint('PROMPT (${prompt.length} chars):');
-    debugPrint(prompt);
-    debugPrint('=========================');
-
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
@@ -71,11 +62,6 @@ class AppleLlmService extends LlmService {
           'instructions': instructions,
         },
       );
-
-      // TODO: DEV HARNESS — remove before release
-      debugPrint('=== APPLE LLM RESPONSE ===');
-      debugPrint(response ?? '(null)');
-      debugPrint('==========================');
 
       if (response == null || response.isEmpty) {
         return LlmExtractionResult.failed('Empty response from model');
@@ -93,24 +79,10 @@ class AppleLlmService extends LlmService {
   LlmExtractionResult _parseResponse(String response) {
     final json = LlmPrompts.parseResponse(response);
 
-    // TODO: DEV HARNESS — remove before release
-    debugPrint('=== LLM PARSE: json=${json != null}');
-    if (json != null) {
-      debugPrint(
-          '=== LLM PARSE: keys=${json.keys.toList()}, ingredients=${(json['ingredients'] as List?)?.length ?? 0}, directions=${(json['directions'] as List?)?.length ?? 0}');
-    }
-
     if (json == null) {
-      debugPrint('=== LLM PARSE FAILED: could not extract JSON from response');
       return LlmExtractionResult.failed('Failed to parse JSON response');
     }
 
-    final result = LlmExtractionResult.fromJson(json);
-
-    // TODO: DEV HARNESS — remove before release
-    debugPrint(
-        '=== LLM RESULT: success=${result.success}, error=${result.error}, ingredients=${result.ingredients.length}, directions=${result.directions.length}');
-
-    return result;
+    return LlmExtractionResult.fromJson(json);
   }
 }

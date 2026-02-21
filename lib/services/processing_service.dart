@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/processing_job.dart';
@@ -87,13 +85,6 @@ class ProcessingService {
       // Step 0: Description-only fast path (YouTube only)
       final llm = _llmService;
       final llmAvailable = llm != null && await llm.isAvailable();
-
-      // TODO: DEV HARNESS — remove before release
-      debugPrint('=== PROCESSING SERVICE ===');
-      debugPrint('LLM: ${llm?.name ?? "none"}, available: $llmAvailable');
-      debugPrint(
-          'Description (${description?.length ?? 0} chars): $description');
-      debugPrint('==========================');
 
       if (description != null && description.isNotEmpty && llmAvailable) {
         await _updateJob(
@@ -190,12 +181,6 @@ class ProcessingService {
 
       audioPath = await _audioService.extractAudio(videoPath);
 
-      // TODO: DEV HARNESS — remove before release
-      final audioFile = File(audioPath);
-      final audioSize = await audioFile.length();
-      debugPrint(
-          '=== AUDIO FILE: $audioSize bytes (${audioSize ~/ 1024} KB) ===');
-
       await _updateJob(
         jobId,
         progress: 0.1,
@@ -236,13 +221,6 @@ class ProcessingService {
       );
 
       final transcript = transcriptionResult.text;
-
-      // TODO: DEV HARNESS — remove before release
-      debugPrint('=== TRANSCRIPTION RESULT ===');
-      debugPrint(
-          'Text (${transcript.length} chars): ${transcript.substring(0, transcript.length.clamp(0, 500))}');
-      debugPrint('Confidence: ${transcriptionResult.confidence}');
-      debugPrint('============================');
 
       // Step 3: Extract frames from video
       await _updateJob(
