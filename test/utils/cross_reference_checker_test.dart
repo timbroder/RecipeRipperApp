@@ -260,5 +260,83 @@ void main() {
         );
       });
     });
+
+    group('deduplication', () {
+      test('skips multi-word food word if any component is in ingredients', () {
+        // "lemon juice" in directions should not be auto-added when
+        // "Juice of 1 lemon" is already an ingredient (contains "lemon")
+        final ingredients = [
+          Ingredient(item: 'Juice of 1 lemon', order: 0),
+          Ingredient(item: 'flour', order: 1),
+        ];
+        final directions = [
+          Direction(
+            stepNumber: 1,
+            text: 'Add the lemon juice to the flour',
+          ),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+        );
+
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          isNot(contains('lemon juice')),
+        );
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          isNot(contains('lemon')),
+        );
+      });
+
+      test('removes single-word items covered by auto-added multi-word items',
+          () {
+        // If "edamame pasta" is auto-added, "edamame" and "pasta" should
+        // not also be added separately
+        final ingredients = [
+          Ingredient(item: 'broccoli', order: 0),
+        ];
+        final directions = [
+          Direction(
+            stepNumber: 1,
+            text: 'Cook edamame pasta and add broccoli',
+          ),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+        );
+
+        final addedItems = result.autoAddedIngredients.map((i) => i.item);
+        expect(addedItems, contains('edamame pasta'));
+        // Single-word components should be suppressed
+        expect(addedItems, isNot(contains('edamame')));
+        expect(addedItems, isNot(contains('pasta')));
+      });
+
+      test('skips food word that appears in existing ingredient text', () {
+        // "cream" should not be auto-added if an ingredient is "cream cheese"
+        final ingredients = [
+          Ingredient(item: 'cream cheese', order: 0),
+        ];
+        final directions = [
+          Direction(stepNumber: 1, text: 'Spread the cream cheese'),
+        ];
+
+        final result = CrossReferenceChecker.check(
+          ingredients: ingredients,
+          directions: directions,
+          title: 'Cream Cheese Dip',
+        );
+
+        expect(
+          result.autoAddedIngredients.map((i) => i.item),
+          isNot(contains('cream')),
+        );
+      });
+    });
   });
 }

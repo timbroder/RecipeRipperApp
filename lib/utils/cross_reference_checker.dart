@@ -227,16 +227,24 @@ class CrossReferenceChecker {
       }
     }
 
+    // Build full ingredient text for substring matching
+    final allIngredientText =
+        ingredients.map((i) => i.item.toLowerCase()).join(' | ');
+
     // Find missing ingredients (mentioned in directions but not in ingredients)
     for (final word in directionFoodWords) {
       // Skip if any ingredient already covers this word
       if (allIngredientFoodWords.contains(word)) continue;
 
-      // Skip multi-word items if their component words are covered
+      // Skip if this word appears in any existing ingredient's item text
+      if (_wordAppearsInIngredientText(word, allIngredientText)) continue;
+
+      // Skip multi-word items if any component word is already covered
+      // by existing ingredients (e.g., "lemon juice" when "lemon" exists)
       if (word.contains(' ')) {
         final parts = word.split(' ');
         if (parts
-            .every((p) => allIngredientFoodWords.contains(_singularize(p)))) {
+            .any((p) => allIngredientFoodWords.contains(_singularize(p)))) {
           continue;
         }
       }
@@ -253,12 +261,48 @@ class CrossReferenceChecker {
       );
     }
 
+    // Deduplicate: remove single-word items that are part of an auto-added
+    // multi-word item (e.g., remove "pasta" if "edamame pasta" was added)
+    final multiWordAdded =
+        autoAddedIngredients.where((i) => i.item.contains(' ')).toList();
+    if (multiWordAdded.isNotEmpty) {
+      autoAddedIngredients.removeWhere((ingredient) {
+        if (ingredient.item.contains(' ')) return false; // keep multi-word
+        return multiWordAdded
+            .any((mw) => mw.item.split(' ').contains(ingredient.item));
+      });
+      missingIngredients.removeWhere((word) {
+        if (word.contains(' ')) return false;
+        return multiWordAdded.any((mw) => mw.item.split(' ').contains(word));
+      });
+    }
+
     return CrossReferenceResult(
       unusedIngredients: unusedIngredients,
       missingIngredients: missingIngredients,
       warnings: warnings,
       autoAddedIngredients: autoAddedIngredients,
     );
+  }
+
+  /// Check if a food word (or its component words) appears in any existing
+  /// ingredient's item text. Catches cases like "lemon" appearing in
+  /// "Juice of 1 lemon".
+  static bool _wordAppearsInIngredientText(
+    String word,
+    String allIngredientText,
+  ) {
+    // For single words, check direct or singular match
+    if (!word.contains(' ')) {
+      if (allIngredientText.contains(word)) return true;
+      final singular = _singularize(word);
+      if (allIngredientText.contains(singular)) return true;
+      return false;
+    }
+
+    // For multi-word items, check if the whole phrase appears
+    if (allIngredientText.contains(word)) return true;
+    return false;
   }
 
   /// Check if directions text mentions an ingredient item directly.
