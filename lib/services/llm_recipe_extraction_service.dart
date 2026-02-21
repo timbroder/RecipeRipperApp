@@ -159,13 +159,13 @@ class LlmRecipeExtractionService {
     }
 
     // Priority 2: Transcript (spoken recipe content)
+    // Note: Do NOT apply NoiseFilter to transcript. The noise filter is designed
+    // for line-by-line OCR text and will drop the entire transcript (which is
+    // one continuous paragraph) if any engagement word like "like" appears.
     if (transcript != null && transcript.isNotEmpty && remaining > 200) {
-      final filtered = NoiseFilter.filterText(transcript);
-      if (filtered.isNotEmpty) {
-        final section = _truncateText(filtered, remaining * 2 ~/ 3);
-        sections.add('TRANSCRIPT:\n$section');
-        remaining -= section.length + 13; // 13 for "TRANSCRIPT:\n"
-      }
+      final section = _truncateText(transcript, remaining * 2 ~/ 3);
+      sections.add('TRANSCRIPT:\n$section');
+      remaining -= section.length + 13; // 13 for "TRANSCRIPT:\n"
     }
 
     // Priority 3: OCR (noisiest, lowest priority)
