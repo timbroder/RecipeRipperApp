@@ -15,12 +15,11 @@ class LlmPrompts {
   static String fullExtractionInstructions() {
     return 'You extract recipes from cooking video text into JSON. '
         'Output format: {"title":"NAME","ingredients":["AMOUNT ITEM","AMOUNT ITEM"],"directions":["STEP","STEP"]} '
-        'IMPORTANT: Only include ingredients and directions actually mentioned in the text. '
-        'Do NOT invent or add any ingredients not in the text. '
-        'Include every ingredient mentioned, with quantity and unit when given. '
-        'Include the main protein, vegetable, and starch/grain of the dish as ingredients even if no exact quantity is stated — use reasonable defaults or omit the quantity. '
-        'Use the video title as context for what the dish is. '
-        'Directions should be imperative steps. '
+        'List EVERY ingredient mentioned in the text — err on inclusion over omission. '
+        'Preserve quantities and units as stated (e.g. "1 can beans", "0.5 cup cashews", "juice of 1 lemon"). '
+        'If no quantity is stated, list the ingredient name alone. '
+        'The video title describes the dish style — do not extract title words as separate ingredients. '
+        'Directions should be concise imperative steps. '
         'Ignore greetings, promotions, and non-recipe content.';
   }
 
@@ -43,12 +42,11 @@ class LlmPrompts {
   static String descriptionOnlyInstructions() {
     return 'You extract recipes from video descriptions into JSON. '
         'Output format: {"title":"NAME","ingredients":["AMOUNT ITEM","AMOUNT ITEM"],"directions":["STEP","STEP"]} '
-        'IMPORTANT: Only include ingredients and directions actually in the text. '
-        'Do NOT invent or add any ingredients not in the text. '
-        'Include every ingredient mentioned, with quantity and unit when given. '
-        'Include the main protein, vegetable, and starch/grain of the dish as ingredients even if no exact quantity is stated — use reasonable defaults or omit the quantity. '
-        'Use the video title as context for what the dish is. '
-        'Directions should be imperative steps. '
+        'List EVERY ingredient mentioned in the text — err on inclusion over omission. '
+        'Preserve quantities and units as stated (e.g. "1 can beans", "0.5 cup cashews", "juice of 1 lemon"). '
+        'If no quantity is stated, list the ingredient name alone. '
+        'The video title describes the dish style — do not extract title words as separate ingredients. '
+        'Directions should be concise imperative steps. '
         'If no recipe found: {"title":null,"ingredients":[],"directions":[]}';
   }
 
