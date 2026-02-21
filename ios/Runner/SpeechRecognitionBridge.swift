@@ -120,7 +120,7 @@ class SpeechRecognitionBridge: NSObject {
 
         // Create recognition request
         let request = SFSpeechURLRecognitionRequest(url: fileURL)
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = true
         request.taskHint = .dictation  // Better for continuous speech like recipe narration
         request.addsPunctuation = true
@@ -130,6 +130,9 @@ class SpeechRecognitionBridge: NSObject {
         print("=== SPEECH BRIDGE: Language: \(language), onDevice: true, taskHint: dictation")
 
         var hasCalledResult = false
+        // Track best partial result — on-device recognizer sometimes returns empty
+        // final result despite producing valid partial results
+        var bestPartialText = ""
 
         recognizer.recognitionTask(with: request) { recognitionResult, error in
             // TODO: DEV HARNESS — remove before release
@@ -142,11 +145,20 @@ class SpeechRecognitionBridge: NSObject {
                 print("=== SPEECH BRIDGE: ERROR userInfo: \(nsError.userInfo)")
                 if !hasCalledResult {
                     hasCalledResult = true
-                    result(FlutterError(
-                        code: "RECOGNITION_ERROR",
-                        message: "Transcription failed: \(error.localizedDescription)",
-                        details: "domain=\(nsError.domain) code=\(nsError.code)"
-                    ))
+                    // Even on error, return best partial if we have one
+                    if !bestPartialText.isEmpty {
+                        print("=== SPEECH BRIDGE: Error occurred but returning best partial (\(bestPartialText.count) chars)")
+                        result([
+                            "text": bestPartialText,
+                            "confidence": 0.8,
+                        ])
+                    } else {
+                        result(FlutterError(
+                            code: "RECOGNITION_ERROR",
+                            message: "Transcription failed: \(error.localizedDescription)",
+                            details: "domain=\(nsError.domain) code=\(nsError.code)"
+                        ))
+                    }
                 }
                 return
             }
@@ -155,13 +167,27 @@ class SpeechRecognitionBridge: NSObject {
                 print("=== SPEECH BRIDGE: No result object")
                 if !hasCalledResult {
                     hasCalledResult = true
-                    result(FlutterError(
-                        code: "NO_RESULT",
-                        message: "No transcription result",
-                        details: nil
-                    ))
+                    if !bestPartialText.isEmpty {
+                        print("=== SPEECH BRIDGE: No result but returning best partial (\(bestPartialText.count) chars)")
+                        result([
+                            "text": bestPartialText,
+                            "confidence": 0.8,
+                        ])
+                    } else {
+                        result(FlutterError(
+                            code: "NO_RESULT",
+                            message: "No transcription result",
+                            details: nil
+                        ))
+                    }
                 }
                 return
+            }
+
+            // Always capture the longest partial text as fallback
+            let currentText = recognitionResult.bestTranscription.formattedString
+            if currentText.count > bestPartialText.count {
+                bestPartialText = currentText
             }
 
             if recognitionResult.isFinal {
@@ -169,16 +195,26 @@ class SpeechRecognitionBridge: NSObject {
                 let segmentCount = recognitionResult.bestTranscription.segments.count
                 let preview = String(transcription.prefix(200))
                 print("=== SPEECH BRIDGE: FINAL text (\(transcription.count) chars, \(segmentCount) segments): \(preview)...")
+
+                // Use best partial as fallback if final result is empty
+                let outputText: String
+                if transcription.isEmpty && !bestPartialText.isEmpty {
+                    print("=== SPEECH BRIDGE: Final was empty, using best partial (\(bestPartialText.count) chars)")
+                    outputText = bestPartialText
+                } else {
+                    outputText = transcription
+                }
+
                 if !hasCalledResult {
                     hasCalledResult = true
                     result([
-                        "text": transcription,
-                        "confidence": 1.0,
+                        "text": outputText,
+                        "confidence": transcription.isEmpty ? 0.8 : 1.0,
                     ])
                 }
             } else {
                 let partial = recognitionResult.bestTranscription.formattedString
-                print("=== SPEECH BRIDGE: Partial (\(partial.count) chars)")
+                print("=== SPEECH BRIDGE: Partial (\(partial.count) chars), bestPartial: \(bestPartialText.count) chars")
             }
         }
     }
