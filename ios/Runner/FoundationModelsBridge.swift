@@ -2,9 +2,8 @@ import Flutter
 import UIKit
 import FoundationModels
 
-/// Bridge for Apple Foundation Models (iOS 26+).
+/// Bridge for Apple Foundation Models.
 /// Provides on-device LLM text generation via FoundationModels framework.
-@available(iOS 26, *)
 class FoundationModelsBridge: NSObject {
     private var channel: FlutterMethodChannel?
 
