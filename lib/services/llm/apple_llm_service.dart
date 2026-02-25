@@ -15,8 +15,9 @@ class AppleLlmService extends LlmService {
   Future<bool> isAvailable() async {
     if (!Platform.isIOS) return false;
     try {
-      final result = await _channel.invokeMethod<bool>('isAvailable');
-      return result ?? false;
+      final result = await _channel.invokeMethod<Map>('isAvailable');
+      if (result == null) return false;
+      return result['available'] == true;
     } on PlatformException {
       return false;
     } on MissingPluginException {
@@ -29,9 +30,10 @@ class AppleLlmService extends LlmService {
     String text, {
     String? videoTitle,
   }) async {
-    final prompt =
-        LlmPrompts.fullExtractionPrompt(text, videoTitle: videoTitle);
-    return _generate(prompt);
+    return _generate(
+      instructions: LlmPrompts.fullExtractionInstructions(),
+      prompt: LlmPrompts.fullExtractionUserPrompt(text, videoTitle: videoTitle),
+    );
   }
 
   @override
@@ -39,18 +41,26 @@ class AppleLlmService extends LlmService {
     String description, {
     String? videoTitle,
   }) async {
-    final prompt = LlmPrompts.descriptionOnlyPrompt(
-      description,
-      videoTitle: videoTitle,
+    return _generate(
+      instructions: LlmPrompts.descriptionOnlyInstructions(),
+      prompt: LlmPrompts.descriptionOnlyUserPrompt(
+        description,
+        videoTitle: videoTitle,
+      ),
     );
-    return _generate(prompt);
   }
 
-  Future<LlmExtractionResult> _generate(String prompt) async {
+  Future<LlmExtractionResult> _generate({
+    required String instructions,
+    required String prompt,
+  }) async {
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
-        {'prompt': prompt},
+        {
+          'prompt': prompt,
+          'instructions': instructions,
+        },
       );
 
       if (response == null || response.isEmpty) {
@@ -59,41 +69,20 @@ class AppleLlmService extends LlmService {
 
       return _parseResponse(response);
     } on PlatformException catch (e) {
+      if (e.code == 'CONTEXT_OVERFLOW') {
+        return LlmExtractionResult.failed('context_overflow');
+      }
       return LlmExtractionResult.failed('Platform error: ${e.message}');
     }
   }
 
   LlmExtractionResult _parseResponse(String response) {
     final json = LlmPrompts.parseResponse(response);
+
     if (json == null) {
       return LlmExtractionResult.failed('Failed to parse JSON response');
     }
 
-    try {
-      final title = json['title'] as String?;
-      final ingredientsList = json['ingredients'] as List<dynamic>? ?? [];
-      final directionsList = json['directions'] as List<dynamic>? ?? [];
-
-      final ingredients = ingredientsList.map((item) {
-        final map = item as Map<String, dynamic>;
-        return LlmIngredient(
-          quantity: map['quantity']?.toString(),
-          unit: map['unit'] as String?,
-          item: map['item'] as String? ?? '',
-          notes: map['notes'] as String?,
-        );
-      }).toList();
-
-      final directions = directionsList.map((d) => d.toString()).toList();
-
-      return LlmExtractionResult(
-        title: title,
-        ingredients: ingredients,
-        directions: directions,
-        success: true,
-      );
-    } catch (e) {
-      return LlmExtractionResult.failed('Error parsing result: $e');
-    }
+    return LlmExtractionResult.fromJson(json);
   }
 }

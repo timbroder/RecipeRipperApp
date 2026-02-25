@@ -37,6 +37,43 @@ class LlmExtractionResult {
   factory LlmExtractionResult.failed(String error) {
     return LlmExtractionResult(success: false, error: error);
   }
+
+  /// Parse from JSON, handling both flat-string and structured ingredients.
+  ///
+  /// Flat format: `{"ingredients": ["1 cup flour", "2 eggs"]}`
+  /// Structured format: `{"ingredients": [{"quantity":"1","unit":"cup","item":"flour"}]}`
+  factory LlmExtractionResult.fromJson(Map<String, dynamic> json) {
+    try {
+      final title = json['title'] as String?;
+      final ingredientsList = json['ingredients'] as List<dynamic>? ?? [];
+      final directionsList = json['directions'] as List<dynamic>? ?? [];
+
+      final ingredients = ingredientsList.map((item) {
+        if (item is String) {
+          // Flat string format — store as raw item for later parsing
+          return LlmIngredient(item: item);
+        }
+        final map = item as Map<String, dynamic>;
+        return LlmIngredient(
+          quantity: map['quantity']?.toString(),
+          unit: map['unit'] as String?,
+          item: map['item'] as String? ?? '',
+          notes: map['notes'] as String?,
+        );
+      }).toList();
+
+      final directions = directionsList.map((d) => d.toString()).toList();
+
+      return LlmExtractionResult(
+        title: title,
+        ingredients: ingredients,
+        directions: directions,
+        success: true,
+      );
+    } catch (e) {
+      return LlmExtractionResult.failed('Error parsing result: $e');
+    }
+  }
 }
 
 /// Abstract interface for LLM-based recipe extraction.

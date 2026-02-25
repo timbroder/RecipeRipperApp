@@ -90,31 +90,6 @@ class AndroidLlmService extends LlmService {
       return LlmExtractionResult.failed('Failed to parse JSON response');
     }
 
-    try {
-      final title = json['title'] as String?;
-      final ingredientsList = json['ingredients'] as List<dynamic>? ?? [];
-      final directionsList = json['directions'] as List<dynamic>? ?? [];
-
-      final ingredients = ingredientsList.map((item) {
-        final map = item as Map<String, dynamic>;
-        return LlmIngredient(
-          quantity: map['quantity']?.toString(),
-          unit: map['unit'] as String?,
-          item: map['item'] as String? ?? '',
-          notes: map['notes'] as String?,
-        );
-      }).toList();
-
-      final directions = directionsList.map((d) => d.toString()).toList();
-
-      return LlmExtractionResult(
-        title: title,
-        ingredients: ingredients,
-        directions: directions,
-        success: true,
-      );
-    } catch (e) {
-      return LlmExtractionResult.failed('Error parsing result: $e');
-    }
+    return LlmExtractionResult.fromJson(json);
   }
 }

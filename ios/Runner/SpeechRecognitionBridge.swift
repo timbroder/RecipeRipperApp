@@ -62,6 +62,8 @@ class SpeechRecognitionBridge: NSObject {
 
     /// Transcribe audio file to text
     private func transcribeAudio(audioPath: String, language: String, result: @escaping FlutterResult) {
+        let fileURL = URL(fileURLWithPath: audioPath)
+
         // Check if speech recognition is available
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language)) else {
             result(FlutterError(
@@ -92,37 +94,101 @@ class SpeechRecognitionBridge: NSObject {
         }
 
         // Create recognition request
-        let audioURL = URL(fileURLWithPath: audioPath)
-        let request = SFSpeechURLRecognitionRequest(url: audioURL)
-        request.shouldReportPartialResults = false
-        request.requiresOnDeviceRecognition = true // Force on-device processing
+        let request = SFSpeechURLRecognitionRequest(url: fileURL)
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
+        request.taskHint = .dictation  // Better for continuous speech like recipe narration
+        request.addsPunctuation = true
 
-        // Start recognition
+        var hasCalledResult = false
+        // The on-device recognizer processes audio in segments. Each segment's
+        // partial results build up independently (e.g., 3→558 chars, then resets
+        // to 4→279 chars for the next segment). The final isFinal=true callback
+        // often returns empty text. We accumulate all segments to get the full
+        // transcript.
+        var completedSegments: [String] = []
+        var currentSegmentBest = ""
+
         recognizer.recognitionTask(with: request) { recognitionResult, error in
             if let error = error {
-                result(FlutterError(
-                    code: "RECOGNITION_ERROR",
-                    message: "Transcription failed: \(error.localizedDescription)",
-                    details: nil
-                ))
+                if !hasCalledResult {
+                    hasCalledResult = true
+                    // On error, return accumulated segments if we have them
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    if !fullText.isEmpty {
+                        result([
+                            "text": fullText,
+                            "confidence": 0.8,
+                        ])
+                    } else {
+                        let nsError = error as NSError
+                        result(FlutterError(
+                            code: "RECOGNITION_ERROR",
+                            message: "Transcription failed: \(error.localizedDescription)",
+                            details: "domain=\(nsError.domain) code=\(nsError.code)"
+                        ))
+                    }
+                }
                 return
             }
 
             guard let recognitionResult = recognitionResult else {
-                result(FlutterError(
-                    code: "NO_RESULT",
-                    message: "No transcription result",
-                    details: nil
-                ))
+                if !hasCalledResult {
+                    hasCalledResult = true
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    if !fullText.isEmpty {
+                        result(["text": fullText, "confidence": 0.8])
+                    } else {
+                        result(FlutterError(
+                            code: "NO_RESULT",
+                            message: "No transcription result",
+                            details: nil
+                        ))
+                    }
+                }
                 return
+            }
+
+            let currentText = recognitionResult.bestTranscription.formattedString
+
+            // Detect segment boundary: when partial length drops significantly,
+            // the recognizer has started a new audio segment
+            if currentText.count < currentSegmentBest.count / 2 && currentSegmentBest.count > 20 {
+                completedSegments.append(currentSegmentBest)
+                currentSegmentBest = currentText
+            } else if currentText.count >= currentSegmentBest.count {
+                currentSegmentBest = currentText
             }
 
             if recognitionResult.isFinal {
                 let transcription = recognitionResult.bestTranscription.formattedString
-                result([
-                    "text": transcription,
-                    "confidence": 1.0, // iOS doesn't provide confidence scores
-                ])
+
+                // Finalize: use final text if non-empty, otherwise use accumulated segments
+                if !transcription.isEmpty {
+                    if !hasCalledResult {
+                        hasCalledResult = true
+                        result(["text": transcription, "confidence": 1.0])
+                    }
+                } else {
+                    // Final was empty — use accumulated segments
+                    if !currentSegmentBest.isEmpty {
+                        completedSegments.append(currentSegmentBest)
+                    }
+                    let fullText = completedSegments.joined(separator: " ")
+                    if !hasCalledResult {
+                        hasCalledResult = true
+                        result([
+                            "text": fullText,
+                            "confidence": fullText.isEmpty ? 0.0 : 0.9,
+                        ])
+                    }
+                }
             }
         }
     }

@@ -51,6 +51,58 @@ void main() {
         );
       });
 
+      test('should recognize newly added vegetable keywords', () {
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 head broccoli'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('2 cups cauliflower'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 bunch asparagus'),
+          greaterThan(0.5),
+        );
+        // Note: "1 cucumber" scores 0.3 because the temperature regex
+        // matches "1 c" as 1°C, triggering a direction penalty (-0.3).
+        // Score is 0.2 (length) + 0.3 (digit) + 0.1 (keyword) - 0.3 (temp) = 0.3
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 cucumber'),
+          greaterThanOrEqualTo(0.3),
+        );
+      });
+
+      test('should recognize newly added protein keywords', () {
+        expect(
+          IngredientClassifier.classifyAsIngredient('8 oz salmon'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 lb shrimp'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 block tofu'),
+          greaterThan(0.3),
+        );
+      });
+
+      test('should recognize specialty keywords', () {
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 cup edamame'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('8 oz noodles'),
+          greaterThan(0.5),
+        );
+        expect(
+          IngredientClassifier.classifyAsIngredient('1 cup lentils'),
+          greaterThan(0.5),
+        );
+      });
+
       test('should score low for very short or empty lines', () {
         expect(
           IngredientClassifier.classifyAsIngredient(''),

@@ -70,6 +70,9 @@ class CrossReferenceChecker {
     'all purpose flour',
     'bread flour',
     'whole wheat flour',
+    'edamame pasta',
+    'nutritional yeast',
+    'green beans',
   };
 
   /// Normalize a word to its singular form for matching.
@@ -174,9 +177,16 @@ class CrossReferenceChecker {
   }
 
   /// Check cross-references between ingredients and directions.
+  ///
+  /// Optionally accepts:
+  /// - [title] to extract food words from the recipe title
+  /// - [sourceText] raw transcript/description text to find food words
+  ///   the LLM may have mentioned but not included in directions
   static CrossReferenceResult check({
     required List<Ingredient> ingredients,
     required List<Direction> directions,
+    String? title,
+    String? sourceText,
   }) {
     if (ingredients.isEmpty || directions.isEmpty) {
       return CrossReferenceResult(
@@ -194,7 +204,18 @@ class CrossReferenceChecker {
 
     // Combine all direction text
     final directionsText = directions.map((d) => d.text).join(' ');
-    final directionFoodWords = _extractFoodWords(directionsText);
+    final allFoodWords = _extractFoodWords(directionsText);
+
+    // Also extract food words from the title
+    if (title != null && title.isNotEmpty) {
+      allFoodWords.addAll(_extractFoodWords(title));
+    }
+
+    // Also extract food words from raw source text (transcript/description)
+    // This catches ingredients the LLM mentioned but didn't put in directions
+    if (sourceText != null && sourceText.isNotEmpty) {
+      allFoodWords.addAll(_extractFoodWords(sourceText));
+    }
 
     // Build a set of all ingredient food words
     final allIngredientFoodWords = <String>{};
@@ -209,7 +230,7 @@ class CrossReferenceChecker {
     // Find unused ingredients (in ingredient list but not in directions)
     for (final ingredient in ingredients) {
       final words = ingredientWordMap[ingredient.item] ?? {};
-      final isUsed = words.any((w) => directionFoodWords.contains(w)) ||
+      final isUsed = words.any((w) => allFoodWords.contains(w)) ||
           _textMentionsItem(directionsText, ingredient.item);
       if (!isUsed) {
         unusedIngredients.add(ingredient.item);
@@ -217,16 +238,37 @@ class CrossReferenceChecker {
       }
     }
 
-    // Find missing ingredients (mentioned in directions but not in ingredients)
-    for (final word in directionFoodWords) {
+    // Build full ingredient text for substring matching
+    final allIngredientText =
+        ingredients.map((i) => i.item.toLowerCase()).join(' | ');
+
+    // Find missing ingredients (mentioned in text but not in ingredients)
+    for (final word in allFoodWords) {
       // Skip if any ingredient already covers this word
       if (allIngredientFoodWords.contains(word)) continue;
 
-      // Skip multi-word items if their component words are covered
+      // Skip if this word appears in any existing ingredient's item text
+      if (_wordAppearsInIngredientText(word, allIngredientText)) continue;
+
+      // Skip multi-word items if all their component words are covered
       if (word.contains(' ')) {
         final parts = word.split(' ');
         if (parts
             .every((p) => allIngredientFoodWords.contains(_singularize(p)))) {
+          continue;
+        }
+        // Also skip if any keyword component appears in ingredient text
+        // (e.g., "lemon juice" when ingredient is "Juice of 1 lemon")
+        final keywordParts = parts.where(
+          (p) =>
+              IngredientClassifier.ingredientKeywords.contains(p) ||
+              IngredientClassifier.ingredientKeywords.contains(_singularize(p)),
+        );
+        if (keywordParts.isNotEmpty &&
+            keywordParts.any(
+              (p) => _wordAppearsInIngredientText(
+                  _singularize(p), allIngredientText),
+            )) {
           continue;
         }
       }
@@ -243,12 +285,48 @@ class CrossReferenceChecker {
       );
     }
 
+    // Deduplicate: remove single-word items that are part of an auto-added
+    // multi-word item (e.g., remove "pasta" if "edamame pasta" was added)
+    final multiWordAdded =
+        autoAddedIngredients.where((i) => i.item.contains(' ')).toList();
+    if (multiWordAdded.isNotEmpty) {
+      autoAddedIngredients.removeWhere((ingredient) {
+        if (ingredient.item.contains(' ')) return false; // keep multi-word
+        return multiWordAdded
+            .any((mw) => mw.item.split(' ').contains(ingredient.item));
+      });
+      missingIngredients.removeWhere((word) {
+        if (word.contains(' ')) return false;
+        return multiWordAdded.any((mw) => mw.item.split(' ').contains(word));
+      });
+    }
+
     return CrossReferenceResult(
       unusedIngredients: unusedIngredients,
       missingIngredients: missingIngredients,
       warnings: warnings,
       autoAddedIngredients: autoAddedIngredients,
     );
+  }
+
+  /// Check if a food word (or its component words) appears in any existing
+  /// ingredient's item text. Catches cases like "lemon" appearing in
+  /// "Juice of 1 lemon".
+  static bool _wordAppearsInIngredientText(
+    String word,
+    String allIngredientText,
+  ) {
+    // For single words, check direct or singular match
+    if (!word.contains(' ')) {
+      if (allIngredientText.contains(word)) return true;
+      final singular = _singularize(word);
+      if (allIngredientText.contains(singular)) return true;
+      return false;
+    }
+
+    // For multi-word items, check if the whole phrase appears
+    if (allIngredientText.contains(word)) return true;
+    return false;
   }
 
   /// Check if directions text mentions an ingredient item directly.
