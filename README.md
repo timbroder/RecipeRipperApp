@@ -172,13 +172,18 @@ open coverage/html/index.html
 A Mac-based harness for testing the LLM recipe extraction pipeline (prompt building, response parsing, and post-processing) without needing an iOS device or Apple Foundation Models.
 
 ```bash
+# Run all tests including YouTube fetch (requires network):
 flutter test test/harness/recipe_extraction_harness_test.dart
+
+# Run only offline/canned tests:
+flutter test --exclude-tags network test/harness/recipe_extraction_harness_test.dart
 ```
 
 **What it tests:**
 - Prompt construction (system instructions + user prompt)
 - JSON response parsing (LLM output → structured data)
 - Post-processing (ingredient parsing, cross-reference checking, deduplication)
+- YouTube video data fetching (title, description, captions)
 
 **What it does NOT test:**
 - Video downloading
@@ -188,7 +193,23 @@ flutter test test/harness/recipe_extraction_harness_test.dart
 
 These steps require a real device. The harness picks up where transcription leaves off.
 
-#### Workflow
+#### Workflow A: YouTube URL (recommended)
+
+1. **Set `youtubeUrl`** in the "YouTube URL Pipeline" test group to any YouTube video URL.
+
+2. **Run the harness** — it fetches the video title, description, and closed captions (auto-generated subtitles) directly from YouTube:
+   ```
+   flutter test test/harness/recipe_extraction_harness_test.dart --name "Step 1"
+   ```
+
+3. **Paste the printed prompt into any LLM** (Claude, ChatGPT, Gemini, etc.) and copy the JSON response.
+
+4. **Paste the LLM's JSON into `llmResponse`** and re-run to see the final recipe after all post-processing:
+   ```
+   flutter test test/harness/recipe_extraction_harness_test.dart --name "Step 2"
+   ```
+
+#### Workflow B: Manual transcript
 
 1. **Get a transcript.** Either:
    - Run the app on an iOS device and copy the transcript from logs
@@ -202,7 +223,7 @@ These steps require a real device. The harness picks up where transcription leav
    flutter test test/harness/recipe_extraction_harness_test.dart --name "show prompt"
    ```
 
-4. **Paste that prompt into any LLM** (Claude, ChatGPT, Gemini, etc.) and copy the JSON response.
+4. **Paste that prompt into any LLM** and copy the JSON response.
 
 5. **Paste the LLM's JSON into the harness** (the `llmOutput` variable in the "JSON response parsing" test) and re-run to see the final recipe after all post-processing.
 
