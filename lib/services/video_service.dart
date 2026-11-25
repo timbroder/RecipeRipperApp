@@ -8,7 +8,23 @@ import 'package:video_player/video_player.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+import '../models/recipe.dart';
 import 'video_page_extractor.dart';
+import 'web_recipe_extractor.dart';
+
+/// Result of a download attempt — either a video file or an extracted recipe.
+sealed class DownloadResult {}
+
+class VideoDownloaded extends DownloadResult {
+  final String filePath;
+  VideoDownloaded(this.filePath);
+}
+
+class WebRecipeExtracted extends DownloadResult {
+  final Recipe recipe;
+  final String extractionMethod;
+  WebRecipeExtracted(this.recipe, this.extractionMethod);
+}
 
 /// Exception thrown when video operations fail
 class VideoException implements Exception {
@@ -201,11 +217,15 @@ class VideoService {
     }
   }
 
-  /// Downloads a video from a URL.
+  /// Downloads a video from a URL, or extracts a recipe from an HTML page.
   ///
   /// Supports YouTube, Instagram, TikTok (optimized), direct video URLs,
-  /// and any URL that serves video content or has og:video meta tags.
-  Future<String> downloadVideo(
+  /// any URL that serves video content or has og:video meta tags, and
+  /// HTML pages containing recipe data (JSON-LD or heuristic extraction).
+  ///
+  /// Returns [VideoDownloaded] for video files, or [WebRecipeExtracted]
+  /// if a recipe was found directly on an HTML page.
+  Future<DownloadResult> downloadVideo(
     String url, {
     ProgressCallback? onProgress,
   }) async {
@@ -213,13 +233,17 @@ class VideoService {
 
     switch (urlType) {
       case 'youtube':
-        return await _downloadYouTubeVideo(url, onProgress: onProgress);
+        return VideoDownloaded(
+            await _downloadYouTubeVideo(url, onProgress: onProgress));
       case 'instagram':
-        return await _downloadInstagramVideo(url, onProgress: onProgress);
+        return VideoDownloaded(
+            await _downloadInstagramVideo(url, onProgress: onProgress));
       case 'tiktok':
-        return await _downloadTikTokVideo(url, onProgress: onProgress);
+        return VideoDownloaded(
+            await _downloadTikTokVideo(url, onProgress: onProgress));
       case 'direct':
-        return await _downloadDirectVideo(url, onProgress: onProgress);
+        return VideoDownloaded(
+            await _downloadDirectVideo(url, onProgress: onProgress));
       default:
         return await _downloadUnknownUrl(url, onProgress: onProgress);
     }
@@ -492,8 +516,9 @@ class VideoService {
   /// Probes an unknown URL via HEAD request and attempts to download video.
   ///
   /// If Content-Type is video/*, downloads directly. If text/html, fetches
-  /// the page and tries generic og:video extraction. Otherwise throws.
-  Future<String> _downloadUnknownUrl(
+  /// the page and tries: 1) og:video extraction, 2) web recipe extraction.
+  /// Otherwise throws.
+  Future<DownloadResult> _downloadUnknownUrl(
     String url, {
     ProgressCallback? onProgress,
   }) async {
@@ -518,7 +543,8 @@ class VideoService {
 
       if (contentType.startsWith('video/')) {
         onProgress?.call(0.1, 'Downloading video...');
-        return await _downloadVideoFile(url, onProgress: onProgress);
+        return VideoDownloaded(
+            await _downloadVideoFile(url, onProgress: onProgress));
       }
 
       if (contentType.startsWith('text/html')) {
@@ -540,34 +566,48 @@ class VideoService {
         final html = response.data;
         if (html == null || html.isEmpty) {
           throw VideoException(
-            'Could not extract video from this page. '
+            'Could not find a video or recipe on this page. '
             'The site may require login or block direct access.',
             code: 'NOT_A_VIDEO',
           );
         }
 
+        // Try og:video extraction first
         onProgress?.call(0.3, 'Extracting video URL...');
 
         final extracted = VideoPageExtractor.extractGenericVideoData(html);
-        if (extracted == null) {
-          throw VideoException(
-            'Could not extract video from this page. '
-            'The site may require login or block direct access.',
-            code: 'NOT_A_VIDEO',
+        if (extracted != null) {
+          _lastVideoTitle = extracted.title;
+          _lastVideoDescription = extracted.description;
+
+          onProgress?.call(0.4, 'Downloading video...');
+          return VideoDownloaded(await _downloadVideoFile(extracted.videoUrl,
+              onProgress: onProgress));
+        }
+
+        // No video found — try web recipe extraction
+        onProgress?.call(0.5, 'Looking for recipe data...');
+
+        final recipeResult =
+            WebRecipeExtractor.extractFromHtml(html, sourceUrl: url);
+        if (recipeResult != null) {
+          onProgress?.call(1.0, 'Recipe found!');
+          return WebRecipeExtracted(
+            recipeResult.recipe,
+            recipeResult.extractionMethod,
           );
         }
 
-        _lastVideoTitle = extracted.title;
-        _lastVideoDescription = extracted.description;
-
-        onProgress?.call(0.4, 'Downloading video...');
-        return await _downloadVideoFile(extracted.videoUrl,
-            onProgress: onProgress);
+        throw VideoException(
+          'Could not find a video or recipe on this page. '
+          'The site may require login or block direct access.',
+          code: 'NOT_A_VIDEO',
+        );
       }
 
       // Content-Type is neither video nor HTML
       throw VideoException(
-        'Could not extract video from this page. '
+        'Could not find a video or recipe on this page. '
         'The site may require login or block direct access.',
         code: 'NOT_A_VIDEO',
       );
