@@ -63,8 +63,9 @@ import CloudKit
     iCloudBridge?.setup(with: controller.binaryMessenger)
 
     // Set up Foundation Models bridge for on-device LLM
-    foundationModelsBridge = FoundationModelsBridge()
-    foundationModelsBridge?.setup(with: controller.binaryMessenger)
+    let fmBridge = FoundationModelsBridge()
+    fmBridge.setup(with: controller.binaryMessenger)
+    foundationModelsBridge = fmBridge
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

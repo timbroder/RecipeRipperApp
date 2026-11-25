@@ -5,7 +5,6 @@ import UserNotifications
 
 /// Bridge for iOS Background Tasks framework integration with Flutter
 /// Handles scheduling and executing background video processing tasks
-/// Note: BGTaskScheduler requires iOS 13+, version checks are done internally
 class BackgroundTaskBridge: NSObject {
     private static let CHANNEL_NAME = "com.reciperipper/background_tasks"
     private static let TASK_IDENTIFIER = "com.reciperipper.videoProcessing"
@@ -18,14 +17,6 @@ class BackgroundTaskBridge: NSObject {
 
     private override init() {
         super.init()
-    }
-
-    /// Check if background tasks are available (iOS 13+)
-    private var isBackgroundTasksAvailable: Bool {
-        if #available(iOS 13.0, *) {
-            return true
-        }
-        return false
     }
 
     /// Set up the Flutter method channel
@@ -42,8 +33,6 @@ class BackgroundTaskBridge: NSObject {
 
     /// Register background task with the system - must be called before app finishes launching
     func registerBackgroundTask() {
-        guard #available(iOS 13.0, *) else { return }
-
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: BackgroundTaskBridge.TASK_IDENTIFIER,
             using: nil
@@ -56,8 +45,7 @@ class BackgroundTaskBridge: NSObject {
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "isAvailable":
-            // BGTaskScheduler is available on iOS 13+
-            result(isBackgroundTasksAvailable)
+            result(true)
 
         case "scheduleProcessing":
             guard let args = call.arguments as? [String: Any],
@@ -104,13 +92,6 @@ class BackgroundTaskBridge: NSObject {
 
     /// Schedule a video processing task
     private func scheduleProcessing(jobId: String, videoPath: String, sourceUrl: String?, result: @escaping FlutterResult) {
-        guard #available(iOS 13.0, *) else {
-            result(FlutterError(code: "UNAVAILABLE",
-                               message: "Background tasks require iOS 13+",
-                               details: nil))
-            return
-        }
-
         // Store job info for when task runs
         pendingJobs[jobId] = [
             "jobId": jobId,
@@ -155,15 +136,13 @@ class BackgroundTaskBridge: NSObject {
     /// Cancel all pending jobs
     private func cancelAllJobs(result: @escaping FlutterResult) {
         pendingJobs.removeAll()
-        if #available(iOS 13.0, *) {
-            BGTaskScheduler.shared.cancelAllTaskRequests()
-        }
+        BGTaskScheduler.shared.cancelAllTaskRequests()
         result(true)
     }
 
     /// Get status of a job
     private func getJobStatus(jobId: String, result: @escaping FlutterResult) {
-        if let job = pendingJobs[jobId] {
+        if pendingJobs[jobId] != nil {
             result([
                 "state": "ENQUEUED",
                 "progress": 0
@@ -174,7 +153,6 @@ class BackgroundTaskBridge: NSObject {
     }
 
     /// Handle the background task when it runs
-    @available(iOS 13.0, *)
     private func handleBackgroundTask(_ task: BGProcessingTask) {
         // Set expiration handler
         task.expirationHandler = { [weak self] in
@@ -229,7 +207,6 @@ class BackgroundTaskBridge: NSObject {
     }
 
     /// Handle task expiration
-    @available(iOS 13.0, *)
     private func handleTaskExpiration(_ task: BGProcessingTask) {
         // Notify user that task was interrupted
         showBackgroundNotification(
@@ -244,7 +221,6 @@ class BackgroundTaskBridge: NSObject {
     }
 
     /// Schedule the next pending task
-    @available(iOS 13.0, *)
     private func scheduleNextTask() {
         guard !pendingJobs.isEmpty else { return }
 

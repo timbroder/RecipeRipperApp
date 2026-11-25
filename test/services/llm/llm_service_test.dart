@@ -47,6 +47,54 @@ void main() {
       expect(result.error, equals('Something went wrong'));
       expect(result.meetsMinimumQuality, isFalse);
     });
+
+    group('fromJson', () {
+      test('parses flat string ingredients', () {
+        final result = LlmExtractionResult.fromJson({
+          'title': 'Test',
+          'ingredients': ['2 cups flour', '1 tsp salt'],
+          'directions': ['Mix together'],
+        });
+        expect(result.success, isTrue);
+        expect(result.ingredients.length, equals(2));
+        expect(result.ingredients[0].item, equals('2 cups flour'));
+        expect(result.ingredients[0].quantity, isNull);
+        expect(result.ingredients[0].unit, isNull);
+      });
+
+      test('parses structured ingredients', () {
+        final result = LlmExtractionResult.fromJson({
+          'title': 'Test',
+          'ingredients': [
+            {'quantity': '2', 'unit': 'cups', 'item': 'flour', 'notes': null},
+          ],
+          'directions': ['Mix'],
+        });
+        expect(result.success, isTrue);
+        expect(result.ingredients[0].quantity, equals('2'));
+        expect(result.ingredients[0].unit, equals('cups'));
+        expect(result.ingredients[0].item, equals('flour'));
+      });
+
+      test('handles missing fields gracefully', () {
+        final result = LlmExtractionResult.fromJson({
+          'title': null,
+          'ingredients': [],
+          'directions': [],
+        });
+        expect(result.success, isTrue);
+        expect(result.title, isNull);
+        expect(result.ingredients, isEmpty);
+        expect(result.directions, isEmpty);
+      });
+
+      test('handles invalid data with failed result', () {
+        final result = LlmExtractionResult.fromJson({
+          'ingredients': 'not a list',
+        });
+        expect(result.success, isFalse);
+      });
+    });
   });
 
   group('LlmIngredient', () {

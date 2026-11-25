@@ -193,7 +193,15 @@ class ProcessingService {
         'Transcribing audio to text...',
       );
 
-      // Step 2: Transcribe audio to text
+      // Step 2: Request speech permission and transcribe audio to text
+      final hasPermission = await _speechService.requestPermission();
+      if (!hasPermission) {
+        throw Exception(
+          'Speech recognition permission denied. '
+          'Please grant permission in Settings > Privacy & Security > Speech Recognition.',
+        );
+      }
+
       final transcriptionResult = await _speechService.transcribeAudio(
         audioPath,
         onProgress: (p) {

@@ -249,6 +249,30 @@ class VideoService {
     }
   }
 
+  /// Normalizes YouTube URLs to a format youtube_explode_dart can parse.
+  /// Handles Shorts, mobile, and other non-standard URL formats.
+  String _normalizeYouTubeUrl(String url) {
+    final uri = Uri.parse(url);
+    final pathSegments = uri.pathSegments;
+
+    // Handle youtube.com/shorts/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'shorts') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    // Handle youtube.com/live/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'live') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    // Handle youtube.com/embed/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'embed') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    return url;
+  }
+
   /// Downloads a YouTube video
   Future<String> _downloadYouTubeVideo(
     String url, {
@@ -257,8 +281,11 @@ class VideoService {
     try {
       onProgress?.call(0.1, 'Fetching video information...');
 
+      // Normalize Shorts/live/embed URLs to standard watch?v= format
+      final normalizedUrl = _normalizeYouTubeUrl(url);
+
       // Get video metadata
-      final video = await _youtubeExplode.videos.get(url);
+      final video = await _youtubeExplode.videos.get(normalizedUrl);
       _lastVideoTitle = video.title;
       _lastVideoDescription = video.description;
 

@@ -167,6 +167,56 @@ genhtml coverage/lcov.info -o coverage/html
 open coverage/html/index.html
 ```
 
+### Recipe Extraction Test Harness
+
+A Mac-based harness for testing the LLM recipe extraction pipeline (prompt building, response parsing, and post-processing) without needing an iOS device or Apple Foundation Models.
+
+```bash
+flutter test test/harness/recipe_extraction_harness_test.dart
+```
+
+**What it tests:**
+- Prompt construction (system instructions + user prompt)
+- JSON response parsing (LLM output → structured data)
+- Post-processing (ingredient parsing, cross-reference checking, deduplication)
+
+**What it does NOT test:**
+- Video downloading
+- Audio extraction or speech-to-text transcription
+- OCR / frame extraction
+- Apple Foundation Models inference
+
+These steps require a real device. The harness picks up where transcription leaves off.
+
+#### Workflow
+
+1. **Get a transcript.** Either:
+   - Run the app on an iOS device and copy the transcript from logs
+   - Use any transcription tool on the video's audio
+   - Manually transcribe the video yourself
+
+2. **Add your test data** to the harness file — set the transcript text, video title, and (optionally) a golden reference ingredient list.
+
+3. **Run the harness** — it prints the exact prompt that would be sent to Foundation Models:
+   ```
+   flutter test test/harness/recipe_extraction_harness_test.dart --name "show prompt"
+   ```
+
+4. **Paste that prompt into any LLM** (Claude, ChatGPT, Gemini, etc.) and copy the JSON response.
+
+5. **Paste the LLM's JSON into the harness** (the `llmOutput` variable in the "JSON response parsing" test) and re-run to see the final recipe after all post-processing.
+
+#### Built-in test data
+
+The harness ships with sample data for [Cheesy Cream of Broccoli Pasta](https://youtube.com/shorts/K6wEWWhJf7Q) including:
+- Transcript text
+- Golden reference ingredients ([source](https://gist.github.com/timbroder/1fa88e090ea2830fd3d1c41eeaef8c67))
+- Two simulated LLM responses:
+  - **Good response** — captures all ingredients with quantities
+  - **Poor response** — drops quantities and misses beans (simulates Foundation Models quality)
+
+The "poor response" test verifies that the cross-reference checker recovers missing ingredients from the transcript.
+
 ## Roadmap
 
 See [PROJECT_PLAN.md](PROJECT_PLAN.md) for detailed sprint breakdown (Sprints 0-6, ~14-15 weeks to MVP).

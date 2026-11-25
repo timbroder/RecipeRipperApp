@@ -77,16 +77,24 @@ class ICloudBridge: NSObject {
     // MARK: - iCloud Availability
 
     private func checkAvailability(result: @escaping FlutterResult) {
-        if let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-            result(true)
-        } else {
-            result(false)
-        }
+        // Use ubiquityIdentityToken instead of url(forUbiquityContainerIdentifier:)
+        // to avoid exceptions when iCloud entitlement is not configured
+        result(FileManager.default.ubiquityIdentityToken != nil)
     }
 
     // MARK: - Account Info
 
     private func getAccountInfo(result: @escaping FlutterResult) {
+        // Check if iCloud is available at all before calling CloudKit APIs
+        // CKContainer.accountStatus throws ObjC exceptions when iCloud entitlement is missing
+        guard FileManager.default.ubiquityIdentityToken != nil else {
+            result([
+                "isSignedIn": false,
+                "error": "iCloud is not available"
+            ] as [String: Any])
+            return
+        }
+
         CKContainer.default().accountStatus { status, error in
             DispatchQueue.main.async {
                 var accountInfo: [String: Any] = [:]
@@ -94,13 +102,8 @@ class ICloudBridge: NSObject {
                 switch status {
                 case .available:
                     accountInfo["isSignedIn"] = true
-                    // Get user record ID for display name
-                    CKContainer.default().fetchUserRecordID { recordID, error in
-                        if let recordID = recordID {
-                            accountInfo["email"] = recordID.recordName
-                        }
-                        result(accountInfo)
-                    }
+                    accountInfo["email"] = "iCloud User"
+                    result(accountInfo)
                     return
 
                 case .noAccount:

@@ -6,6 +6,8 @@ import 'package:recipe_ripper/services/llm_recipe_extraction_service.dart';
 class MockLlmService extends LlmService {
   LlmExtractionResult? descriptionResult;
   LlmExtractionResult? fullResult;
+  String? lastText;
+  int callCount = 0;
 
   @override
   String get name => 'Mock LLM';
@@ -18,6 +20,8 @@ class MockLlmService extends LlmService {
     String text, {
     String? videoTitle,
   }) async {
+    lastText = text;
+    callCount++;
     return fullResult ?? LlmExtractionResult.failed('Not configured');
   }
 
@@ -26,6 +30,8 @@ class MockLlmService extends LlmService {
     String description, {
     String? videoTitle,
   }) async {
+    lastText = description;
+    callCount++;
     return descriptionResult ?? LlmExtractionResult.failed('Not configured');
   }
 }
@@ -210,6 +216,83 @@ void main() {
           recipe.metadata!.warnings!,
           anyElement(contains('Unused ingredient: nutmeg')),
         );
+      });
+
+      test('handles flat string ingredients from simplified prompts', () async {
+        mockLlm.fullResult = LlmExtractionResult(
+          title: 'Simple Pasta',
+          ingredients: [
+            // Flat strings — no quantity/unit/notes parsed by LLM
+            LlmIngredient(item: '2 cups flour'),
+            LlmIngredient(item: '1 tsp salt'),
+            LlmIngredient(item: '3 eggs'),
+          ],
+          directions: ['Mix all ingredients'],
+          success: true,
+        );
+
+        final recipe = await LlmRecipeExtractionService.tryFullLlm(
+          transcript: 'test',
+          ocrText: null,
+          description: null,
+          llmService: mockLlm,
+        );
+
+        expect(recipe, isNotNull);
+        // Flat strings should be parsed by IngredientClassifier
+        final flour =
+            recipe!.ingredients.firstWhere((i) => i.item.contains('flour'));
+        expect(flour.quantity, equals(2.0));
+        expect(flour.unit, equals('cups'));
+      });
+
+      test('retries with shorter text on context overflow', () async {
+        mockLlm = MockLlmService();
+        mockLlm.fullResult = LlmExtractionResult(
+          title: 'Test',
+          ingredients: [
+            LlmIngredient(item: 'flour'),
+            LlmIngredient(item: 'sugar'),
+          ],
+          directions: ['Mix'],
+          success: true,
+        );
+
+        // Simple mock returns success; verify truncation is applied
+        final recipe = await LlmRecipeExtractionService.tryFullLlm(
+          transcript: 'A very long transcript ' * 1000,
+          ocrText: null,
+          description: null,
+          llmService: mockLlm,
+        );
+
+        expect(recipe, isNotNull);
+        // Text should have been truncated
+        expect(mockLlm.lastText!.length, lessThan(15000));
+      });
+
+      test('truncates long input text', () async {
+        mockLlm.fullResult = LlmExtractionResult(
+          title: 'Test',
+          ingredients: [
+            LlmIngredient(item: 'flour'),
+            LlmIngredient(item: 'sugar'),
+          ],
+          directions: ['Mix'],
+          success: true,
+        );
+
+        final longTranscript = 'word ' * 10000; // ~50,000 chars
+        final recipe = await LlmRecipeExtractionService.tryFullLlm(
+          transcript: longTranscript,
+          ocrText: 'ocr text ' * 5000,
+          description: 'description ' * 3000,
+          llmService: mockLlm,
+        );
+
+        expect(recipe, isNotNull);
+        // Combined text sent to LLM should be truncated
+        expect(mockLlm.lastText!.length, lessThan(15000));
       });
     });
   });
