@@ -41,8 +41,9 @@ dependencies:
   html: ^0.15.4
 
   # Video processing (Sprint 2)
-  # Using community fork after original FFmpegKit was retired
-  ffmpeg_kit_flutter_new: ^4.1.0
+  # Using community fork after original FFmpegKit was retired.
+  # 4.3.0+ ships an arm64 iOS-simulator slice (required by Xcode 26+/iOS 27 sims).
+  ffmpeg_kit_flutter_new: ^4.3.0
 
   # Notifications (Sprint 2)
   flutter_local_notifications: ^17.0.0
