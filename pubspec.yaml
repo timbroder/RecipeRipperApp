@@ -37,6 +37,9 @@ dependencies:
   dio: ^5.4.0
   youtube_explode_dart: ^2.0.2
 
+  # HTML parsing for Instagram/TikTok video extraction
+  html: ^0.15.4
+
   # Video processing (Sprint 2)
   # Using community fork after original FFmpegKit was retired
   ffmpeg_kit_flutter_new: ^4.1.0
