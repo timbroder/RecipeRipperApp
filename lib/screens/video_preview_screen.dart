@@ -58,7 +58,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     try {
       if (widget.videoSource.isUrl) {
         // Download from URL — may return video or web recipe
-        final result = await _videoService.downloadVideo(
+        final result = await _videoService.prepareFromUrl(
           widget.videoSource.url!,
           onProgress: (progress, status) {
             setState(() {
@@ -69,23 +69,13 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
         );
 
         switch (result) {
-          case VideoDownloaded(:final filePath):
-            // Extract metadata for video
-            setState(() {
-              _statusMessage = 'Extracting video information...';
-            });
-
-            final metadata = await _videoService.extractMetadata(
-              filePath,
-              sourceUrl: widget.videoSource.url,
-            );
-
+          case PreparedVideo(:final metadata):
             setState(() {
               _metadata = metadata;
               _isLoading = false;
             });
 
-          case WebRecipeExtracted(:final recipe, :final extractionMethod):
+          case PreparedWebRecipe(:final recipe, :final extractionMethod):
             setState(() {
               _webRecipe = recipe;
               _extractionMethod = extractionMethod;

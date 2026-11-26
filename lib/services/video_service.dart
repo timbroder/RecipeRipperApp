@@ -27,6 +27,22 @@ class WebRecipeExtracted extends DownloadResult {
   WebRecipeExtracted(this.recipe, this.extractionMethod);
 }
 
+/// What a URL turned into after [VideoService.prepareFromUrl].
+sealed class PreparedSource {}
+
+/// A downloaded video, ready for `ProcessingService.processVideo`.
+class PreparedVideo extends PreparedSource {
+  final VideoMetadata metadata;
+  PreparedVideo(this.metadata);
+}
+
+/// A recipe scraped directly from a web page; there's no video to process.
+class PreparedWebRecipe extends PreparedSource {
+  final Recipe recipe;
+  final String extractionMethod;
+  PreparedWebRecipe(this.recipe, this.extractionMethod);
+}
+
 /// Exception thrown when video operations fail
 class VideoException implements Exception {
   final String message;
@@ -226,6 +242,27 @@ class VideoService {
   ///
   /// Returns [VideoDownloaded] for video files, or [WebRecipeExtracted]
   /// if a recipe was found directly on an HTML page.
+  /// Download [url] and, if it's a video, extract its metadata (title,
+  /// description, duration, thumbnail).
+  ///
+  /// This is everything the app does with a shared URL before processing.
+  /// The video preview screen and the pipeline harness both call it.
+  Future<PreparedSource> prepareFromUrl(
+    String url, {
+    ProgressCallback? onProgress,
+  }) async {
+    final result = await downloadVideo(url, onProgress: onProgress);
+    switch (result) {
+      case VideoDownloaded(:final filePath):
+        onProgress?.call(1.0, 'Extracting video information...');
+        return PreparedVideo(
+          await extractMetadata(filePath, sourceUrl: url),
+        );
+      case WebRecipeExtracted(:final recipe, :final extractionMethod):
+        return PreparedWebRecipe(recipe, extractionMethod);
+    }
+  }
+
   Future<DownloadResult> downloadVideo(
     String url, {
     ProgressCallback? onProgress,
@@ -250,6 +287,30 @@ class VideoService {
     }
   }
 
+  /// Normalizes YouTube URLs to a format youtube_explode_dart can parse.
+  /// Handles Shorts, mobile, and other non-standard URL formats.
+  String _normalizeYouTubeUrl(String url) {
+    final uri = Uri.parse(url);
+    final pathSegments = uri.pathSegments;
+
+    // Handle youtube.com/shorts/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'shorts') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    // Handle youtube.com/live/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'live') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    // Handle youtube.com/embed/VIDEO_ID
+    if (pathSegments.length >= 2 && pathSegments[0] == 'embed') {
+      return 'https://www.youtube.com/watch?v=${pathSegments[1]}';
+    }
+
+    return url;
+  }
+
   /// Downloads a YouTube video
   Future<String> _downloadYouTubeVideo(
     String url, {
@@ -258,8 +319,11 @@ class VideoService {
     try {
       onProgress?.call(0.1, 'Fetching video information...');
 
+      // Normalize Shorts/live/embed URLs to standard watch?v= format
+      final normalizedUrl = _normalizeYouTubeUrl(url);
+
       // Get video metadata
-      final video = await _youtubeExplode.videos.get(url);
+      final video = await _youtubeExplode.videos.get(normalizedUrl);
       _lastVideoTitle = video.title;
       _lastVideoDescription = video.description;
 

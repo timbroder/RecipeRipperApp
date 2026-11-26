@@ -1,5 +1,5 @@
-# Minimum iOS version. Xcode 27 can't target anything below iOS 15.
-platform :ios, '15.0'
+# Minimum iOS version — requires iOS 26 for Apple Foundation Models
+platform :ios, '26.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'

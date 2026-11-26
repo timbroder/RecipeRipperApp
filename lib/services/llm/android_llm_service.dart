@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import '../pipeline_trace.dart';
 import 'llm_service.dart';
 import 'llm_prompts.dart';
 
@@ -68,11 +69,13 @@ class AndroidLlmService extends LlmService {
   }
 
   Future<LlmExtractionResult> _generate(String prompt) async {
+    PipelineTrace.record('llm.request', {'service': name, 'prompt': prompt});
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
         {'prompt': prompt},
       );
+      PipelineTrace.record('llm.response', {'raw': response});
 
       if (response == null || response.isEmpty) {
         return LlmExtractionResult.failed('Empty response from model');
@@ -80,6 +83,7 @@ class AndroidLlmService extends LlmService {
 
       return _parseResponse(response);
     } on PlatformException catch (e) {
+      PipelineTrace.record('llm.error', {'code': e.code, 'message': e.message});
       return LlmExtractionResult.failed('Platform error: ${e.message}');
     }
   }
@@ -90,31 +94,6 @@ class AndroidLlmService extends LlmService {
       return LlmExtractionResult.failed('Failed to parse JSON response');
     }
 
-    try {
-      final title = json['title'] as String?;
-      final ingredientsList = json['ingredients'] as List<dynamic>? ?? [];
-      final directionsList = json['directions'] as List<dynamic>? ?? [];
-
-      final ingredients = ingredientsList.map((item) {
-        final map = item as Map<String, dynamic>;
-        return LlmIngredient(
-          quantity: map['quantity']?.toString(),
-          unit: map['unit'] as String?,
-          item: map['item'] as String? ?? '',
-          notes: map['notes'] as String?,
-        );
-      }).toList();
-
-      final directions = directionsList.map((d) => d.toString()).toList();
-
-      return LlmExtractionResult(
-        title: title,
-        ingredients: ingredients,
-        directions: directions,
-        success: true,
-      );
-    } catch (e) {
-      return LlmExtractionResult.failed('Error parsing result: $e');
-    }
+    return LlmExtractionResult.fromJson(json);
   }
 }

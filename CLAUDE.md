@@ -88,7 +88,10 @@ flutter run
 ```bash
 flutter test                    # Unit tests
 flutter test integration_test/  # Integration tests
+tool/harness.sh <url> [device]  # Run the real pipeline on a URL (see README "Pipeline Harness")
 ```
+
+When working on extraction quality, use the pipeline harness rather than tapping through the app: it runs the app's real pipeline (download, Speech, OCR, Foundation Models) on a simulator or iPhone and prints every stage. Keep it free of recipe logic: if it needs to see something, add a `PipelineTrace.record` call in the app code instead. Speech only works on a physical iPhone; the simulator has no on-device speech model.
 
 ### Building
 ```bash

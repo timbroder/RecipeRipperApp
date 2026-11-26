@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 
+import 'pipeline_trace.dart';
+
 /// Result of speech transcription
 class TranscriptionResult {
   final String text;
@@ -80,6 +82,11 @@ class SpeechTranscriptionService {
 
       return TranscriptionResult.fromMap(result);
     } on PlatformException catch (e) {
+      PipelineTrace.record('transcript.error', {
+        'code': e.code,
+        'message': e.message,
+        'details': e.details?.toString(),
+      });
       throw Exception('Speech recognition failed: ${e.message}');
     }
   }

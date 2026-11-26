@@ -4,8 +4,11 @@ import '../models/direction.dart';
 import '../utils/noise_filter.dart';
 import '../utils/spoken_to_imperative.dart';
 import '../utils/cross_reference_checker.dart';
+import '../utils/description_grounding.dart';
 import '../utils/parsing_utils.dart';
+import '../utils/ingredient_classifier.dart';
 import 'llm/llm_service.dart';
+import 'pipeline_trace.dart';
 
 /// Orchestrates LLM-based recipe extraction with the fallback chain.
 ///
@@ -16,6 +19,12 @@ import 'llm/llm_service.dart';
 /// Both apply noise filtering, spoken-to-imperative conversion,
 /// and cross-reference checking.
 class LlmRecipeExtractionService {
+  /// Approximate max characters for the combined input text.
+  /// Foundation Models has ~4,096 tokens. Reserve ~800 for
+  /// instructions + output, leaving ~3,200 tokens for input.
+  /// At ~4 chars per token, that's ~12,800 characters.
+  static const _maxInputChars = 12800;
+
   /// Try extracting a recipe from just the video description (fast path).
   /// Returns null if the result doesn't meet minimum quality thresholds.
   static Future<Recipe?> tryDescriptionOnly({
@@ -28,15 +37,33 @@ class LlmRecipeExtractionService {
   }) async {
     // Filter noise from description
     final filtered = NoiseFilter.filterText(description);
+    PipelineTrace.record('description.filtered', {'text': filtered});
     if (filtered.trim().isEmpty) return null;
+
+    // Truncate if needed (descriptions are usually short, but just in case)
+    final truncated = _truncateText(filtered, _maxInputChars);
 
     // Call LLM
     final result = await llmService.extractRecipeFromDescription(
-      filtered,
+      truncated,
       videoTitle: videoTitle,
     );
 
-    if (!result.success || !result.meetsMinimumQuality) return null;
+    // The fast path skips the transcript and OCR, so only accept a recipe
+    // that's actually written in the description, not one the model made up
+    // from the dish name.
+    final grounding = DescriptionGrounding.check(
+      _parseIngredients(result),
+      truncated,
+    );
+    final accepted =
+        result.success && result.meetsMinimumQuality && grounding.isGrounded;
+    PipelineTrace.record('description.result', {
+      ..._traceResult(result),
+      'grounding': grounding.toJson(),
+      'accepted': accepted,
+    });
+    if (!accepted) return null;
 
     return _buildRecipe(
       result: result,
@@ -62,28 +89,46 @@ class LlmRecipeExtractionService {
     String? thumbnailPath,
     RecipeMetadata? existingMetadata,
   }) async {
-    // Combine and filter all text sources
-    final parts = <String>[];
-    if (transcript != null && transcript.isNotEmpty) {
-      parts.add('TRANSCRIPT:\n${NoiseFilter.filterText(transcript)}');
-    }
-    if (ocrText != null && ocrText.isNotEmpty) {
-      parts.add('ON-SCREEN TEXT:\n${NoiseFilter.filterText(ocrText)}');
-    }
-    if (description != null && description.isNotEmpty) {
-      parts.add('VIDEO DESCRIPTION:\n${NoiseFilter.filterText(description)}');
-    }
+    // Build combined text with priority: description > transcript > OCR
+    final combinedText = _buildTruncatedInput(
+      transcript: transcript,
+      ocrText: ocrText,
+      description: description,
+    );
 
-    if (parts.isEmpty) return null;
-
-    final combinedText = parts.join('\n\n');
+    PipelineTrace.record('llm.input', {
+      'text': combinedText,
+      'chars': combinedText?.length ?? 0,
+    });
+    if (combinedText == null) return null;
 
     // Call LLM
-    final result = await llmService.extractRecipe(
+    var result = await llmService.extractRecipe(
       combinedText,
       videoTitle: videoTitle,
     );
 
+    // If context overflow, retry with more aggressive truncation
+    if (!result.success && result.error == 'context_overflow') {
+      final shorter = _buildTruncatedInput(
+        transcript: transcript,
+        ocrText: ocrText,
+        description: description,
+        maxChars: _maxInputChars ~/ 2,
+      );
+      PipelineTrace.record('llm.retry', {
+        'reason': 'context_overflow',
+        'chars': shorter?.length ?? 0,
+      });
+      if (shorter != null) {
+        result = await llmService.extractRecipe(
+          shorter,
+          videoTitle: videoTitle,
+        );
+      }
+    }
+
+    PipelineTrace.record('llm.result', _traceResult(result));
     if (!result.success) return null;
 
     return _buildRecipe(
@@ -95,10 +140,70 @@ class LlmRecipeExtractionService {
       processingMethod: 'llm_full',
       description: description,
       existingMetadata: existingMetadata,
+      sourceText: [transcript, ocrText, description]
+          .where((s) => s != null && s.isNotEmpty)
+          .join(' '),
     );
   }
 
+  /// Build combined input text, truncated to fit the token budget.
+  /// Priority: description first, then transcript, then OCR (noisiest).
+  static String? _buildTruncatedInput({
+    required String? transcript,
+    required String? ocrText,
+    required String? description,
+    int maxChars = _maxInputChars,
+  }) {
+    final sections = <String>[];
+    var remaining = maxChars;
+
+    // Priority 1: Description (most structured, least noisy)
+    if (description != null && description.isNotEmpty) {
+      final filtered = NoiseFilter.filterText(description);
+      if (filtered.isNotEmpty) {
+        final section = _truncateText(filtered, remaining ~/ 2);
+        sections.add('DESCRIPTION:\n$section');
+        remaining -= section.length + 14; // 14 for "DESCRIPTION:\n"
+      }
+    }
+
+    // Priority 2: Transcript (spoken recipe content)
+    // Note: Do NOT apply NoiseFilter to transcript. The noise filter is designed
+    // for line-by-line OCR text and will drop the entire transcript (which is
+    // one continuous paragraph) if any engagement word like "like" appears.
+    if (transcript != null && transcript.isNotEmpty && remaining > 200) {
+      final section = _truncateText(transcript, remaining * 2 ~/ 3);
+      sections.add('TRANSCRIPT:\n$section');
+      remaining -= section.length + 13; // 13 for "TRANSCRIPT:\n"
+    }
+
+    // Priority 3: OCR (noisiest, lowest priority)
+    if (ocrText != null && ocrText.isNotEmpty && remaining > 200) {
+      final filtered = NoiseFilter.filterText(ocrText);
+      if (filtered.isNotEmpty) {
+        final section = _truncateText(filtered, remaining);
+        sections.add('ON-SCREEN TEXT:\n$section');
+      }
+    }
+
+    if (sections.isEmpty) return null;
+    return sections.join('\n\n');
+  }
+
+  /// Truncate text to maxChars, breaking at a word boundary.
+  static String _truncateText(String text, int maxChars) {
+    if (text.length <= maxChars) return text;
+    // Find last space before the limit
+    final truncated = text.substring(0, maxChars);
+    final lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxChars * 0.8) {
+      return '${truncated.substring(0, lastSpace)}...';
+    }
+    return '$truncated...';
+  }
+
   /// Build a Recipe from an LLM extraction result.
+  /// Handles both flat-string and structured ingredient formats.
   /// Applies spoken-to-imperative conversion and cross-reference checking.
   static Recipe _buildRecipe({
     required LlmExtractionResult result,
@@ -109,31 +214,13 @@ class LlmRecipeExtractionService {
     required String processingMethod,
     String? description,
     RecipeMetadata? existingMetadata,
+    String? sourceText,
   }) {
     // Parse title
     final title = result.title ?? videoTitle ?? 'Untitled Recipe';
 
-    // Parse ingredients
-    var ingredients = <Ingredient>[];
-    for (int i = 0; i < result.ingredients.length; i++) {
-      final llmIngredient = result.ingredients[i];
-      double? quantity;
-      if (llmIngredient.quantity != null) {
-        quantity = ParsingUtils.parseQuantity(llmIngredient.quantity!);
-      }
-      String? unit = llmIngredient.unit;
-      if (unit != null) {
-        unit = ParsingUtils.normalizeUnit(unit);
-      }
-
-      ingredients.add(Ingredient(
-        quantity: quantity,
-        unit: unit,
-        item: llmIngredient.item,
-        notes: llmIngredient.notes,
-        order: i,
-      ));
-    }
+    // Parse ingredients — handle both flat strings and structured
+    var ingredients = _parseIngredients(result);
 
     // Parse and convert directions to imperative form
     final rawDirections =
@@ -148,11 +235,23 @@ class LlmRecipeExtractionService {
       ));
     }
 
-    // Cross-reference check
+    // Cross-reference check (include title and raw source text)
     final crossRef = CrossReferenceChecker.check(
       ingredients: ingredients,
       directions: directions,
+      title: title,
+      sourceText: sourceText,
     );
+
+    PipelineTrace.record('postprocess', {
+      'processingMethod': processingMethod,
+      'parsedIngredients': ingredients.map(_describeIngredient).toList(),
+      'rawDirections': rawDirections,
+      'imperativeDirections': imperativeDirections,
+      'autoAddedIngredients':
+          crossRef.autoAddedIngredients.map(_describeIngredient).toList(),
+      'warnings': crossRef.warnings,
+    });
 
     // Merge auto-added ingredients
     if (crossRef.autoAddedIngredients.isNotEmpty) {
@@ -175,5 +274,73 @@ class LlmRecipeExtractionService {
       directions: directions,
       metadata: metadata,
     );
+  }
+
+  /// Turn the LLM's ingredients into [Ingredient]s, handling both flat
+  /// strings ("2 cups flour") and structured {quantity, unit, item} entries.
+  static List<Ingredient> _parseIngredients(LlmExtractionResult result) {
+    final ingredients = <Ingredient>[];
+    for (int i = 0; i < result.ingredients.length; i++) {
+      final llmIngredient = result.ingredients[i];
+
+      // Flat string ingredient: parse with IngredientClassifier
+      if (_isFlatStringIngredient(llmIngredient)) {
+        final parsed = IngredientClassifier.parseIngredient(llmIngredient.item);
+        ingredients.add(Ingredient(
+          quantity: parsed['quantity'] as double?,
+          unit: parsed['unit'] as String?,
+          item: parsed['item'] as String? ?? llmIngredient.item,
+          notes: parsed['notes'] as String?,
+          order: i,
+        ));
+      } else {
+        // Structured ingredient from LLM
+        double? quantity;
+        if (llmIngredient.quantity != null) {
+          quantity = ParsingUtils.parseQuantity(llmIngredient.quantity!);
+        }
+        String? unit = llmIngredient.unit;
+        if (unit != null) {
+          unit = ParsingUtils.normalizeUnit(unit);
+        }
+
+        ingredients.add(Ingredient(
+          quantity: quantity,
+          unit: unit,
+          item: llmIngredient.item,
+          notes: llmIngredient.notes,
+          order: i,
+        ));
+      }
+    }
+    return ingredients;
+  }
+
+  /// Summarize an LLM result for the pipeline trace.
+  static Map<String, Object?> _traceResult(LlmExtractionResult result) => {
+        'success': result.success,
+        'error': result.error,
+        'title': result.title,
+        'ingredients': result.ingredients
+            .map((i) => [i.quantity, i.unit, i.item, i.notes]
+                .where((p) => p != null && p.isNotEmpty)
+                .join(' '))
+            .toList(),
+        'directions': result.directions,
+        'meetsMinimumQuality': result.meetsMinimumQuality,
+      };
+
+  static String _describeIngredient(Ingredient i) => [
+        i.quantity?.toString(),
+        i.unit,
+        i.item,
+        if (i.notes != null) '(${i.notes})',
+      ].where((p) => p != null && p.isNotEmpty).join(' ');
+
+  /// Check if an LlmIngredient is a flat string (no quantity/unit/notes parsed).
+  static bool _isFlatStringIngredient(LlmIngredient ingredient) {
+    return ingredient.quantity == null &&
+        ingredient.unit == null &&
+        ingredient.notes == null;
   }
 }

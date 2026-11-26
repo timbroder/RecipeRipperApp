@@ -152,7 +152,9 @@ class RecipeMetadata {
       'processing_time_seconds': processingTimeSeconds,
       'video_duration': videoDuration,
       'frame_count': frameCount,
-      'confidence_score': confidenceScore?.toJson(),
+      'confidence_score': confidenceScore != null
+          ? jsonEncode(confidenceScore!.toJson())
+          : null,
       'description': description,
       'warnings': warnings != null && warnings!.isNotEmpty
           ? jsonEncode(warnings)
@@ -175,8 +177,10 @@ class RecipeMetadata {
       videoDuration: map['video_duration'] as String?,
       frameCount: map['frame_count'] as int?,
       confidenceScore: map['confidence_score'] != null
-          ? ConfidenceScore.fromJson(
-              map['confidence_score'] as Map<String, dynamic>)
+          ? ConfidenceScore.fromJson(map['confidence_score'] is String
+              ? jsonDecode(map['confidence_score'] as String)
+                  as Map<String, dynamic>
+              : map['confidence_score'] as Map<String, dynamic>)
           : null,
       description: map['description'] as String?,
       warnings: warnings,

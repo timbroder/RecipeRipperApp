@@ -167,6 +167,52 @@ genhtml coverage/lcov.info -o coverage/html
 open coverage/html/index.html
 ```
 
+### Pipeline Harness
+
+Runs the app's real URL → recipe pipeline on a URL, with no UI, so you can iterate on extraction without tapping through the app. It runs on an iOS simulator or a plugged-in iPhone, so every stage is the code the app ships:
+
+1. Download the video and read its title and description (`VideoService.prepareFromUrl`)
+2. Description fast path: Foundation Models on the description alone
+3. FFmpeg audio extraction → Speech transcription, and frame extraction → Vision OCR
+4. Foundation Models extraction from description + transcript + OCR, then post-processing
+
+```bash
+# First booted iOS simulator:
+tool/harness.sh https://www.youtube.com/shorts/-xQJKP3mne8
+
+# A specific simulator or a plugged-in iPhone (ids from `flutter devices`):
+tool/harness.sh <url> <device-id>
+
+# Re-print a saved run (the latest if no path is given):
+dart run tool/harness_report.dart harness_runs/<video-id>/<timestamp>.json
+```
+
+The report shows each stage in order with timings: the metadata, whether the description fast path fired and what the model returned, the transcript, the OCR text, the exact prompt and raw Foundation Models response, what post-processing added, and the final recipe. Each run is saved as JSON under `harness_runs/<video-id>/` (gitignored).
+
+**Comparing with the desktop version:** save a [RecipeRipper](https://github.com/timbroder/RecipeRipper) CLI run (its Markdown output) as `integration_test/references/<video-id>.md`. The report then lists which reference ingredients the app found, missed or added.
+
+**How it works:** `integration_test/pipeline_harness_test.dart` calls the same functions as the video preview and processing screens, in the same order, and contains no recipe logic of its own. The pipeline records what each stage saw into a `PipelineTrace` (`lib/services/pipeline_trace.dart`), which does nothing in the app because only the harness installs one. `test_driver/integration_test.dart` receives the trace on the Mac, prints it and saves it.
+
+**On an iPhone** (`tool/harness.sh <url> <device-id>`, with the phone unlocked and plugged in):
+- The script builds a profile build, not debug. Debug builds on iOS 17+ need Xcode to attach a debugger, which Flutter starts through macOS Automation and which can hang on a white screen.
+- If macOS says "iproxy Not Opened", Gatekeeper blocked Flutter's USB helper because Homebrew's download quarantined it. Click Done (not Move to Trash), then clear the flag: `xattr -dr com.apple.quarantine "$(flutter --version --machine | python3 -c 'import json,sys; print(json.load(sys.stdin)["flutterRoot"])')/bin/cache/artifacts"`
+- Tap Allow the first time the app asks for speech recognition.
+
+**Simulator limits:**
+- The simulator has no on-device speech model, and the app requires on-device recognition, so transcription fails there with "Failed to initialize recognizer". Run on an iPhone to test the transcript path.
+- Foundation Models works in the simulator, but the first request after install can fail with a `SensitiveContentAnalysisML` error; the next run works.
+- A run that reaches transcription stops at the speech recognition permission prompt until you tap Allow. On the simulator the prompt can come back after a rebuild (and transcription then fails anyway); on an iPhone you allow it once.
+
+### Post-processing tests with canned LLM responses
+
+`test/harness/recipe_extraction_harness_test.dart` runs on the Mac with no device. It feeds fixed LLM responses through the app's prompt building, response parsing and post-processing, which is handy for working on post-processing in isolation:
+
+```bash
+flutter test test/harness/recipe_extraction_harness_test.dart
+```
+
+It ships with sample data for [Cheesy Cream of Broccoli Pasta](https://youtube.com/shorts/K6wEWWhJf7Q): a transcript, [golden ingredients](https://gist.github.com/timbroder/1fa88e090ea2830fd3d1c41eeaef8c67), and two simulated LLM responses (a good one, and a poor one that drops quantities and misses the beans, to check the cross-reference checker recovers them). To try another model, run "show prompt", paste the prompt into any LLM, paste its JSON into `llmOutput` in "JSON response parsing", and re-run.
+
 ## Roadmap
 
 See [PROJECT_PLAN.md](PROJECT_PLAN.md) for detailed sprint breakdown (Sprints 0-6, ~14-15 weeks to MVP).
