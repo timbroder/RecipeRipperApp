@@ -101,28 +101,16 @@ class SpeechRecognitionBridge: NSObject {
         request.addsPunctuation = true
 
         var hasCalledResult = false
-        // The on-device recognizer processes audio in segments. Each segment's
-        // partial results build up independently (e.g., 3→558 chars, then resets
-        // to 4→279 chars for the next segment). The final isFinal=true callback
-        // often returns empty text. We accumulate all segments to get the full
-        // transcript.
-        var completedSegments: [String] = []
-        var currentSegmentBest = ""
+        var transcript = TranscriptAccumulator()
 
         recognizer.recognitionTask(with: request) { recognitionResult, error in
             if let error = error {
                 if !hasCalledResult {
                     hasCalledResult = true
-                    // On error, return accumulated segments if we have them
-                    if !currentSegmentBest.isEmpty {
-                        completedSegments.append(currentSegmentBest)
-                    }
-                    let fullText = completedSegments.joined(separator: " ")
-                    if !fullText.isEmpty {
-                        result([
-                            "text": fullText,
-                            "confidence": 0.8,
-                        ])
+                    // On error, return what was recognized so far, if anything
+                    let partialText = transcript.text
+                    if !partialText.isEmpty {
+                        result(["text": partialText, "confidence": 0.8])
                     } else {
                         let nsError = error as NSError
                         result(FlutterError(
@@ -138,12 +126,9 @@ class SpeechRecognitionBridge: NSObject {
             guard let recognitionResult = recognitionResult else {
                 if !hasCalledResult {
                     hasCalledResult = true
-                    if !currentSegmentBest.isEmpty {
-                        completedSegments.append(currentSegmentBest)
-                    }
-                    let fullText = completedSegments.joined(separator: " ")
-                    if !fullText.isEmpty {
-                        result(["text": fullText, "confidence": 0.8])
+                    let partialText = transcript.text
+                    if !partialText.isEmpty {
+                        result(["text": partialText, "confidence": 0.8])
                     } else {
                         result(FlutterError(
                             code: "NO_RESULT",
@@ -156,40 +141,64 @@ class SpeechRecognitionBridge: NSObject {
             }
 
             let currentText = recognitionResult.bestTranscription.formattedString
+            transcript.add(currentText)
 
-            // Detect segment boundary: when partial length drops significantly,
-            // the recognizer has started a new audio segment
-            if currentText.count < currentSegmentBest.count / 2 && currentSegmentBest.count > 20 {
-                completedSegments.append(currentSegmentBest)
-                currentSegmentBest = currentText
-            } else if currentText.count >= currentSegmentBest.count {
-                currentSegmentBest = currentText
-            }
-
-            if recognitionResult.isFinal {
-                let transcription = recognitionResult.bestTranscription.formattedString
-
-                // Finalize: use final text if non-empty, otherwise use accumulated segments
-                if !transcription.isEmpty {
-                    if !hasCalledResult {
-                        hasCalledResult = true
-                        result(["text": transcription, "confidence": 1.0])
-                    }
-                } else {
-                    // Final was empty — use accumulated segments
-                    if !currentSegmentBest.isEmpty {
-                        completedSegments.append(currentSegmentBest)
-                    }
-                    let fullText = completedSegments.joined(separator: " ")
-                    if !hasCalledResult {
-                        hasCalledResult = true
-                        result([
-                            "text": fullText,
-                            "confidence": fullText.isEmpty ? 0.0 : 0.9,
-                        ])
-                    }
-                }
+            if recognitionResult.isFinal && !hasCalledResult {
+                hasCalledResult = true
+                let (fullText, confidence) = transcript.finish(finalText: currentText)
+                result([
+                    "text": fullText,
+                    "confidence": fullText.isEmpty ? 0.0 : confidence,
+                ])
             }
         }
+    }
+}
+
+/// Builds the full transcript from on-device speech recognition results.
+///
+/// The on-device recognizer processes long audio in segments, and each
+/// segment's partial results start over (e.g. 3→558 chars, then 4→279 chars
+/// for the next segment). The final result covers only the last segment, and
+/// is sometimes empty. So the transcript is every segment's longest partial
+/// text, joined in order.
+struct TranscriptAccumulator {
+    private(set) var completedSegments: [String] = []
+    private(set) var currentSegmentBest = ""
+
+    /// Record a partial or final result's text.
+    mutating func add(_ text: String) {
+        // A big drop in length means the recognizer started a new segment.
+        if text.count < currentSegmentBest.count / 2 && currentSegmentBest.count > 20 {
+            completedSegments.append(currentSegmentBest)
+            currentSegmentBest = text
+        } else if text.count >= currentSegmentBest.count {
+            currentSegmentBest = text
+        }
+    }
+
+    /// Every segment recognized so far, joined.
+    var text: String {
+        (completedSegments + [currentSegmentBest])
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    /// The full transcript and a confidence once the final result arrives.
+    ///
+    /// With a single segment, the final text is the whole transcript (and is
+    /// better punctuated than the partials), so it's used when present.
+    /// With several segments, the final text is normally just the last one,
+    /// so the joined segments are used. The exception is a final text that
+    /// starts the way the first segment did: it already covers everything.
+    func finish(finalText: String) -> (text: String, confidence: Double) {
+        guard let firstSegment = completedSegments.first else {
+            return finalText.isEmpty ? (text, 0.9) : (finalText, 1.0)
+        }
+        let opening = firstSegment.prefix(20).lowercased()
+        if finalText.lowercased().hasPrefix(opening) {
+            return (finalText, 1.0)
+        }
+        return (text, 0.9)
     }
 }
