@@ -102,6 +102,31 @@ void main() {
         expect(recipe, isNull);
       });
 
+      test('returns null when the recipe is not in the description', () async {
+        // Foundation Models invented this from a dish name and macros
+        // (https://www.youtube.com/shorts/-xQJKP3mne8).
+        mockLlm.descriptionResult = LlmExtractionResult(
+          title: 'Chicken Bacon Fried Rice',
+          ingredients: [
+            LlmIngredient(item: 'chicken'),
+            LlmIngredient(item: 'bacon'),
+            LlmIngredient(item: 'rice'),
+            LlmIngredient(item: 'egg'),
+            LlmIngredient(item: 'soy sauce'),
+          ],
+          directions: ['Cook chicken and bacon.', 'Add rice and egg.'],
+          success: true,
+        );
+
+        final recipe = await LlmRecipeExtractionService.tryDescriptionOnly(
+          description: 'Chicken Bacon Fried Rice\n'
+              'Per Serving Macros:\n530 Calories\n56g Protein',
+          llmService: mockLlm,
+        );
+
+        expect(recipe, isNull);
+      });
+
       test('returns null for empty description after filtering', () async {
         final recipe = await LlmRecipeExtractionService.tryDescriptionOnly(
           description: '@username\n#cooking\nhttps://link.com',

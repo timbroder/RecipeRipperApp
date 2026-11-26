@@ -4,6 +4,7 @@ import '../models/direction.dart';
 import '../utils/noise_filter.dart';
 import '../utils/spoken_to_imperative.dart';
 import '../utils/cross_reference_checker.dart';
+import '../utils/description_grounding.dart';
 import '../utils/parsing_utils.dart';
 import '../utils/ingredient_classifier.dart';
 import 'llm/llm_service.dart';
@@ -48,9 +49,18 @@ class LlmRecipeExtractionService {
       videoTitle: videoTitle,
     );
 
-    final accepted = result.success && result.meetsMinimumQuality;
+    // The fast path skips the transcript and OCR, so only accept a recipe
+    // that's actually written in the description, not one the model made up
+    // from the dish name.
+    final grounding = DescriptionGrounding.check(
+      _parseIngredients(result),
+      truncated,
+    );
+    final accepted =
+        result.success && result.meetsMinimumQuality && grounding.isGrounded;
     PipelineTrace.record('description.result', {
       ..._traceResult(result),
+      'grounding': grounding.toJson(),
       'accepted': accepted,
     });
     if (!accepted) return null;
@@ -210,40 +220,7 @@ class LlmRecipeExtractionService {
     final title = result.title ?? videoTitle ?? 'Untitled Recipe';
 
     // Parse ingredients — handle both flat strings and structured
-    var ingredients = <Ingredient>[];
-    for (int i = 0; i < result.ingredients.length; i++) {
-      final llmIngredient = result.ingredients[i];
-
-      // Flat string ingredient: parse with IngredientClassifier
-      if (_isFlatStringIngredient(llmIngredient)) {
-        final parsed = IngredientClassifier.parseIngredient(llmIngredient.item);
-        ingredients.add(Ingredient(
-          quantity: parsed['quantity'] as double?,
-          unit: parsed['unit'] as String?,
-          item: parsed['item'] as String? ?? llmIngredient.item,
-          notes: parsed['notes'] as String?,
-          order: i,
-        ));
-      } else {
-        // Structured ingredient from LLM
-        double? quantity;
-        if (llmIngredient.quantity != null) {
-          quantity = ParsingUtils.parseQuantity(llmIngredient.quantity!);
-        }
-        String? unit = llmIngredient.unit;
-        if (unit != null) {
-          unit = ParsingUtils.normalizeUnit(unit);
-        }
-
-        ingredients.add(Ingredient(
-          quantity: quantity,
-          unit: unit,
-          item: llmIngredient.item,
-          notes: llmIngredient.notes,
-          order: i,
-        ));
-      }
-    }
+    var ingredients = _parseIngredients(result);
 
     // Parse and convert directions to imperative form
     final rawDirections =
@@ -297,6 +274,46 @@ class LlmRecipeExtractionService {
       directions: directions,
       metadata: metadata,
     );
+  }
+
+  /// Turn the LLM's ingredients into [Ingredient]s, handling both flat
+  /// strings ("2 cups flour") and structured {quantity, unit, item} entries.
+  static List<Ingredient> _parseIngredients(LlmExtractionResult result) {
+    final ingredients = <Ingredient>[];
+    for (int i = 0; i < result.ingredients.length; i++) {
+      final llmIngredient = result.ingredients[i];
+
+      // Flat string ingredient: parse with IngredientClassifier
+      if (_isFlatStringIngredient(llmIngredient)) {
+        final parsed = IngredientClassifier.parseIngredient(llmIngredient.item);
+        ingredients.add(Ingredient(
+          quantity: parsed['quantity'] as double?,
+          unit: parsed['unit'] as String?,
+          item: parsed['item'] as String? ?? llmIngredient.item,
+          notes: parsed['notes'] as String?,
+          order: i,
+        ));
+      } else {
+        // Structured ingredient from LLM
+        double? quantity;
+        if (llmIngredient.quantity != null) {
+          quantity = ParsingUtils.parseQuantity(llmIngredient.quantity!);
+        }
+        String? unit = llmIngredient.unit;
+        if (unit != null) {
+          unit = ParsingUtils.normalizeUnit(unit);
+        }
+
+        ingredients.add(Ingredient(
+          quantity: quantity,
+          unit: unit,
+          item: llmIngredient.item,
+          notes: llmIngredient.notes,
+          order: i,
+        ));
+      }
+    }
+    return ingredients;
   }
 
   /// Summarize an LLM result for the pipeline trace.

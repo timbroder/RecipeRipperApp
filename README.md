@@ -196,7 +196,7 @@ The report shows each stage in order with timings: the metadata, whether the des
 **Simulator limits:**
 - The simulator has no on-device speech model, and the app requires on-device recognition, so transcription fails there with "Failed to initialize recognizer". Run on an iPhone to test the transcript path.
 - Foundation Models works in the simulator, but the first request after install can fail with a `SensitiveContentAnalysisML` error; the next run works.
-- The first run on a device or freshly installed simulator stops at the speech recognition permission prompt until you tap Allow.
+- A run that reaches transcription stops at the speech recognition permission prompt until you tap Allow. On the simulator the prompt can come back after a rebuild (and transcription then fails anyway); on an iPhone you allow it once.
 
 ### Post-processing tests with canned LLM responses
 

@@ -118,6 +118,17 @@ void printEvent(Map<String, dynamic> event) {
           '${(d['ingredients'] as List).length} ingredients, '
           '${(d['directions'] as List).length} directions'
           '${d['error'] != null ? ', error: ${d['error']}' : ''})');
+      final grounding = d['grounding'] as Map<String, dynamic>?;
+      if (grounding != null) {
+        final ungrounded = grounding['ungrounded'] as List;
+        print('Grounding: ${grounding['grounded']}/${grounding['total']} '
+            'ingredients appear in the description, '
+            '${grounding['quantified']} of them with quantities'
+            '${ungrounded.isEmpty ? '' : '; not in it: ${ungrounded.join(', ')}'}');
+        if (grounding['rejectionReason'] != null) {
+          print('Rejected because ${grounding['rejectionReason']}');
+        }
+      }
     case 'audio':
       heading('Audio extracted (FFmpeg) $at');
     case 'transcript.error':
