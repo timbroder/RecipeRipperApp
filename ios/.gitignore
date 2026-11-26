@@ -32,3 +32,7 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Swift Package Manager lockfiles. Like pubspec.lock and Podfile.lock, these
+# aren't committed; Xcode recreates them when it resolves packages.
+**/xcshareddata/swiftpm/Package.resolved

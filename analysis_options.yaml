@@ -4,6 +4,10 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - build/**
+    - android/**
+    - ios/**
+    - macos/**
   errors:
     todo: ignore
     deprecated_member_use: ignore
