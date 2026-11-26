@@ -50,7 +50,8 @@ dependencies:
   flutter_local_notifications: ^17.0.0
 
   # Background processing (Sprint 2)
-  workmanager: ^0.9.0
+  # 0.10.6+ builds with AGP 9 and android.builtInKotlin=false.
+  workmanager: ^0.10.6
 
   # Export/Import and Sharing (Sprint 5)
   share_plus: ^10.0.0
