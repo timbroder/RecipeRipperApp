@@ -31,7 +31,8 @@ dependencies:
   # Video handling (Sprint 1)
   video_player: ^2.8.1
   file_picker: ^10.0.0
-  video_thumbnail: ^0.5.3
+  # Thumbnails come from FFmpeg (see VideoService._generateThumbnail);
+  # video_thumbnail was dropped because it doesn't build with Gradle 9.
 
   # HTTP & File downloading (Sprint 1)
   dio: ^5.4.0
