@@ -185,7 +185,13 @@ flutter analyze
 ## Platform-Specific Notes
 
 ### iOS
-- Requires iOS 14+ for Speech framework offline support
+- Requires iOS 15+ (the lowest deployment target Xcode 27 supports)
+- Uses the UIScene lifecycle (required for apps built with the iOS 27 SDK):
+  - `Info.plist` declares `UIApplicationSceneManifest` with `FlutterSceneDelegate`
+  - Plugins and platform channels are registered in `AppDelegate.didInitializeImplicitFlutterEngine`, not `didFinishLaunching` (there is no `window.rootViewController` yet)
+  - `reciperipper://` URLs and universal links arrive via a scene life-cycle delegate, not `application(_:open:options:)`
+- The Podfile `post_install` hook raises pods below iOS 15 to 15.0; Xcode 27 rejects lower targets
+- iOS 27 simulators run arm64 apps only, so every plugin needs an arm64-simulator slice
 - Add privacy descriptions in Info.plist:
   - `NSSpeechRecognitionUsageDescription`
   - `NSMicrophoneUsageDescription` (even though we don't use mic live)
@@ -223,6 +229,11 @@ flutter devices
 ### Platform channel not found
 - Make sure native code is properly registered in AppDelegate/MainActivity
 - Rebuild app completely: `flutter clean && flutter run`
+
+### iOS simulator build fails with Xcode 27
+- `flutter build ios --simulator` fails in `debug_unpack_ios` with "does not contain architectures arm64 x86_64": Flutter 3.38's `lipo -verify_arch` call doesn't work with Xcode 27's lipo when building two archs. Run on a specific simulator instead, which builds only arm64: `flutter run -d <simulator-id>`
+- "App needs to be updated" on install: the build is x86_64-only. Check that no plugin excludes arm64 for the simulator (see `EXCLUDED_ARCHS` in `ios/Flutter/Generated.xcconfig`), then `flutter clean`
+- App crashes on launch in `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`: the UIScene manifest is missing from `Info.plist`
 
 ### Speech/OCR not working
 - Check permissions are granted

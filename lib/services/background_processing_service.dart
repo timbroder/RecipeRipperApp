@@ -29,7 +29,7 @@ void callbackDispatcher() {
 
         if (jobId == null || videoPath == null) {
           debugPrint('BackgroundProcessing: Missing required parameters');
-          return Future.value(false);
+          return false;
         }
 
         debugPrint('BackgroundProcessing: Starting job $jobId');
@@ -73,13 +73,13 @@ void callbackDispatcher() {
         );
 
         debugPrint('BackgroundProcessing: Job $jobId completed');
-        return Future.value(true);
+        return true;
       }
 
-      return Future.value(false);
+      return false;
     } catch (e) {
       debugPrint('BackgroundProcessing: Error - $e');
-      return Future.value(false);
+      return false;
     }
   });
 }
