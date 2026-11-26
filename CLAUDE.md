@@ -192,6 +192,7 @@ flutter analyze
   - `reciperipper://` URLs and universal links arrive via a scene life-cycle delegate, not `application(_:open:options:)`
 - The Podfile `post_install` hook raises pods below iOS 15 to 15.0; Xcode 27 rejects lower targets
 - iOS 27 simulators run arm64 apps only, so every plugin needs an arm64-simulator slice
+- Plugins come in through Swift Package Manager where they support it (on by default since Flutter 3.50), and through CocoaPods otherwise (currently just `flutter_local_notifications`). The Xcode project links the generated `FlutterGeneratedPluginSwiftPackage` in `ios/Flutter/ephemeral/`, so run `flutter pub get` before opening `Runner.xcworkspace` in Xcode
 - Add privacy descriptions in Info.plist:
   - `NSSpeechRecognitionUsageDescription`
   - `NSMicrophoneUsageDescription` (even though we don't use mic live)
@@ -207,6 +208,7 @@ flutter analyze
   - `INTERNET` (for URL downloads)
 - Configure WorkManager for background tasks
 - Set up Google Drive API credentials for sync
+- The app and several plugins (file_picker, package_info_plus, share_plus, shared_preferences_android, video_player_android, workmanager_android) still apply the Kotlin Gradle plugin. Flutter 3.50 warns that a future release will require Built-in Kotlin instead; `android.builtInKotlin=false` in `gradle.properties` keeps them building for now
 
 ## Known Limitations
 
@@ -231,7 +233,7 @@ flutter devices
 - Rebuild app completely: `flutter clean && flutter run`
 
 ### iOS simulator build fails with Xcode 27
-- `flutter build ios --simulator` fails in `debug_unpack_ios` with "does not contain architectures arm64 x86_64": Flutter 3.38's `lipo -verify_arch` call doesn't work with Xcode 27's lipo when building two archs. Run on a specific simulator instead, which builds only arm64: `flutter run -d <simulator-id>`
+- `flutter build ios --simulator` fails in `debug_unpack_ios` with "does not contain architectures arm64 x86_64": Flutter 3.38's `lipo -verify_arch` call doesn't work with Xcode 27's lipo when building two archs. Upgrade to Flutter 3.50+, which fixes it. On an older Flutter, run on a specific simulator instead, which builds only arm64: `flutter run -d <simulator-id>`
 - "App needs to be updated" on install: the build is x86_64-only. Check that no plugin excludes arm64 for the simulator (see `EXCLUDED_ARCHS` in `ios/Flutter/Generated.xcconfig`), then `flutter clean`
 - App crashes on launch in `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`: the UIScene manifest is missing from `Info.plist`
 
