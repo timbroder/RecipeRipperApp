@@ -193,6 +193,11 @@ The report shows each stage in order with timings: the metadata, whether the des
 
 **How it works:** `integration_test/pipeline_harness_test.dart` calls the same functions as the video preview and processing screens, in the same order, and contains no recipe logic of its own. The pipeline records what each stage saw into a `PipelineTrace` (`lib/services/pipeline_trace.dart`), which does nothing in the app because only the harness installs one. `test_driver/integration_test.dart` receives the trace on the Mac, prints it and saves it.
 
+**On an iPhone** (`tool/harness.sh <url> <device-id>`, with the phone unlocked and plugged in):
+- The script builds a profile build, not debug. Debug builds on iOS 17+ need Xcode to attach a debugger, which Flutter starts through macOS Automation and which can hang on a white screen.
+- If macOS says "iproxy Not Opened", Gatekeeper blocked Flutter's USB helper because Homebrew's download quarantined it. Click Done (not Move to Trash), then clear the flag: `xattr -dr com.apple.quarantine "$(flutter --version --machine | python3 -c 'import json,sys; print(json.load(sys.stdin)["flutterRoot"])')/bin/cache/artifacts"`
+- Tap Allow the first time the app asks for speech recognition.
+
 **Simulator limits:**
 - The simulator has no on-device speech model, and the app requires on-device recognition, so transcription fails there with "Failed to initialize recognizer". Run on an iPhone to test the transcript path.
 - Foundation Models works in the simulator, but the first request after install can fail with a `SensitiveContentAnalysisML` error; the next run works.

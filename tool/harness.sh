@@ -20,9 +20,29 @@ if [[ -z "$device" ]]; then
   fi
 fi
 
+target=integration_test/pipeline_harness_test.dart
+driver=test_driver/integration_test.dart
 cd "$(dirname "$0")/.."
-exec flutter drive \
-  --driver=test_driver/integration_test.dart \
-  --target=integration_test/pipeline_harness_test.dart \
-  -d "$device" \
+
+# Simulators run debug builds.
+if xcrun simctl list devices | grep -q "$device"; then
+  exec flutter drive \
+    --driver="$driver" --target="$target" -d "$device" \
+    --dart-define=VIDEO_URL="$url"
+fi
+
+# On a physical iPhone, use a profile build. A debug build there needs Xcode
+# to attach a debugger (iOS 17+), which Flutter starts through macOS
+# Automation and can hang on a white screen. Profile is also closer to the
+# shipped app (AOT-compiled). flutter drive --profile can't find the app
+# Xcode builds (it looks in build/ios/iphoneos, Xcode writes to
+# Profile-iphoneos), so build first and hand it the binary.
+flutter build ios --profile --target="$target" --dart-define=VIDEO_URL="$url"
+app="$({ ls -td build/ios/iphoneos/Runner.app build/ios/Profile-iphoneos/Runner.app 2>/dev/null || true; } | head -1)"
+if [[ -z "$app" ]]; then
+  echo "Built, but couldn't find Runner.app under build/ios." >&2
+  exit 1
+fi
+exec flutter drive --profile --use-application-binary="$app" \
+  --driver="$driver" --target="$target" -d "$device" \
   --dart-define=VIDEO_URL="$url"
