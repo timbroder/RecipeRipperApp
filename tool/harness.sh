@@ -34,13 +34,14 @@ fi
 # On a physical iPhone, use a profile build. A debug build there needs Xcode
 # to attach a debugger (iOS 17+), which Flutter starts through macOS
 # Automation and can hang on a white screen. Profile is also closer to the
-# shipped app (AOT-compiled). flutter drive --profile can't find the app
-# Xcode builds (it looks in build/ios/iphoneos, Xcode writes to
-# Profile-iphoneos), so build first and hand it the binary.
+# shipped app (AOT-compiled). flutter drive --profile builds the app but then
+# can't find it, so build with flutter build ios first and hand flutter drive
+# the binary. Keep the phone unlocked: a locked phone fails the launch, and
+# locking it mid-run slows transcription badly.
 flutter build ios --profile --target="$target" --dart-define=VIDEO_URL="$url"
-app="$({ ls -td build/ios/iphoneos/Runner.app build/ios/Profile-iphoneos/Runner.app 2>/dev/null || true; } | head -1)"
-if [[ -z "$app" ]]; then
-  echo "Built, but couldn't find Runner.app under build/ios." >&2
+app=build/ios/iphoneos/Runner.app  # where flutter build ios puts it
+if [[ ! -d "$app" ]]; then
+  echo "Built, but $app is missing." >&2
   exit 1
 fi
 exec flutter drive --profile --use-application-binary="$app" \

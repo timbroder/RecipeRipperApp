@@ -302,8 +302,7 @@ double similarity(String a, String b) {
   return x.intersection(y).length / x.union(y).length;
 }
 
-Set<String> nameWords(String line) => line
-    .toLowerCase()
+Set<String> nameWords(String line) => withoutAccents(line.toLowerCase())
     .replaceAll(RegExp(r'[^a-z ]'), ' ')
     .split(' ')
     .where((w) => w.isNotEmpty)
@@ -311,6 +310,19 @@ Set<String> nameWords(String line) => line
         w.length > 3 && w.endsWith('s') ? w.substring(0, w.length - 1) : w)
     .where((w) => !_ignoredWords.contains(w))
     .toSet();
+
+const _accents = {
+  'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a', //
+  'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+  'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+  'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+  'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+  'ñ': 'n', 'ç': 'c',
+};
+
+/// "jalapeño" → "jalapeno", so accented and plain spellings match.
+String withoutAccents(String text) =>
+    text.split('').map((c) => _accents[c] ?? c).join();
 
 // ─────────────────────────────────────────────────────────────
 // Formatting helpers
