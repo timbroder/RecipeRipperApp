@@ -12,8 +12,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
-    <!-- Min SDK -->
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33"/>
+    <!-- minSdk / targetSdk live in android/app/build.gradle (AGP 9 rejects <uses-sdk> here) -->
 
     <application
         android:label="Recipe Slurp"

@@ -31,7 +31,8 @@ dependencies:
   # Video handling (Sprint 1)
   video_player: ^2.8.1
   file_picker: ^10.0.0
-  video_thumbnail: ^0.5.3
+  # Thumbnails come from FFmpeg (see VideoService._generateThumbnail);
+  # video_thumbnail was dropped because it doesn't build with Gradle 9.
 
   # HTTP & File downloading (Sprint 1)
   dio: ^5.4.0
@@ -41,14 +42,16 @@ dependencies:
   html: ^0.15.4
 
   # Video processing (Sprint 2)
-  # Using community fork after original FFmpegKit was retired
-  ffmpeg_kit_flutter_new: ^4.1.0
+  # Using community fork after original FFmpegKit was retired.
+  # 4.3.0+ ships an arm64 iOS-simulator slice (required by Xcode 26+/iOS 27 sims).
+  ffmpeg_kit_flutter_new: ^4.3.0
 
   # Notifications (Sprint 2)
   flutter_local_notifications: ^17.0.0
 
   # Background processing (Sprint 2)
-  workmanager: ^0.9.0
+  # 0.10.6+ builds with AGP 9 and android.builtInKotlin=false.
+  workmanager: ^0.10.6
 
   # Export/Import and Sharing (Sprint 5)
   share_plus: ^10.0.0

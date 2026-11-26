@@ -4,11 +4,13 @@ import BackgroundTasks
 import CloudKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let SHARED_URL_CHANNEL = "com.reciperipper/shared_url"
   private let APP_GROUP_IDENTIFIER = "group.com.reciperipperapp"
   private let SHARED_URL_KEY = "SharedURL"
   private var sharedUrl: String?
+  private var sharedUrlChannel: FlutterMethodChannel?
+  private var incomingUrlHandler: IncomingUrlSceneHandler?
   private var speechRecognitionBridge: SpeechRecognitionBridge?
   private var visionOcrBridge: VisionOcrBridge?
   private var iCloudBridge: ICloudBridge?
@@ -18,21 +20,33 @@ import CloudKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-
-    // Register background tasks before app finishes launching
-    // Note: BackgroundTaskBridge internally checks for iOS 13+ availability
+    // BGTaskScheduler requires registration before the app finishes launching.
+    // The method channel is attached later in didInitializeImplicitFlutterEngine.
     BackgroundTaskBridge.shared.registerBackgroundTask()
-    BackgroundTaskBridge.shared.setup(with: controller.binaryMessenger)
     BackgroundTaskBridge.shared.requestNotificationPermission()
 
-    // Set up method channel for shared URLs (Sprint 1)
-    let sharedUrlChannel = FlutterMethodChannel(
-      name: SHARED_URL_CHANNEL,
-      binaryMessenger: controller.binaryMessenger
-    )
+    // Check for URL shared via Share Extension on launch
+    checkForSharedUrlFromExtension()
 
-    sharedUrlChannel.setMethodCallHandler { [weak self] (call, result) in
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Under the UIScene lifecycle the window (and its FlutterViewController) is
+  // created by the scene, after didFinishLaunching, so plugins and platform
+  // channels are registered here instead of via window.rootViewController.
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let messenger = engineBridge.applicationRegistrar.messenger()
+
+    BackgroundTaskBridge.shared.setup(with: messenger)
+
+    // Set up method channel for shared URLs (Sprint 1)
+    let channel = FlutterMethodChannel(
+      name: SHARED_URL_CHANNEL,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { [weak self] (call, result) in
       if call.method == "getSharedUrl" {
         // First check App Groups for URL from Share Extension
         if let appGroupUrl = self?.getSharedUrlFromAppGroup() {
@@ -47,38 +61,45 @@ import CloudKit
         result(FlutterMethodNotImplemented)
       }
     }
+    sharedUrlChannel = channel
 
-    // Check for URL shared via Share Extension on launch
-    checkForSharedUrlFromExtension()
+    // URL schemes and universal links now arrive through the scene, so listen
+    // for them as a scene life-cycle delegate.
+    let urlHandler = IncomingUrlSceneHandler(
+      onUrl: { [weak self] url in self?.handleIncomingUrl(url) ?? false },
+      onUserActivity: { [weak self] activity in self?.handleUserActivity(activity) ?? false }
+    )
+    engineBridge.pluginRegistry.registrar(forPlugin: "RecipeSlurpIncomingUrls")?
+      .addSceneDelegate(urlHandler)
+    incomingUrlHandler = urlHandler
 
     // Set up Sprint 2 platform channels
     speechRecognitionBridge = SpeechRecognitionBridge()
-    speechRecognitionBridge?.setup(with: controller.binaryMessenger)
+    speechRecognitionBridge?.setup(with: messenger)
 
     visionOcrBridge = VisionOcrBridge()
-    visionOcrBridge?.setup(with: controller.binaryMessenger)
+    visionOcrBridge?.setup(with: messenger)
 
     // Set up Sprint 5 iCloud sync
     iCloudBridge = ICloudBridge.shared
-    iCloudBridge?.setup(with: controller.binaryMessenger)
+    iCloudBridge?.setup(with: messenger)
 
     // Set up Foundation Models bridge for on-device LLM
     let fmBridge = FoundationModelsBridge()
-    fmBridge.setup(with: controller.binaryMessenger)
+    fmBridge.setup(with: messenger)
     foundationModelsBridge = fmBridge
-
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  // Handle URL schemes (reciperipper://)
-  override func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey : Any] = [:]
-  ) -> Bool {
+  // MARK: - Incoming URLs
+
+  /// Handle URL schemes (reciperipper://). Returns true if the URL was handled.
+  private func handleIncomingUrl(_ url: URL) -> Bool {
+    guard url.scheme == "reciperipper" else {
+      return false
+    }
+
     // Check if this is from the Share Extension
-    if url.scheme == "reciperipper" && url.host == "shared" {
+    if url.host == "shared" {
       // Get URL from App Groups (set by Share Extension)
       if let appGroupUrl = getSharedUrlFromAppGroup() {
         sharedUrl = appGroupUrl
@@ -90,25 +111,18 @@ import CloudKit
     // Store the URL to be retrieved by Flutter
     sharedUrl = url.absoluteString
     notifyFlutterOfUrl(url.absoluteString)
-
     return true
   }
 
-  // Handle Universal Links (https://)
-  override func application(
-    _ application: UIApplication,
-    continue userActivity: NSUserActivity,
-    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-  ) -> Bool {
-    // Handle universal links for web URLs
-    if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-       let url = userActivity.webpageURL {
-      sharedUrl = url.absoluteString
-      notifyFlutterOfUrl(url.absoluteString)
-      return true
+  /// Handle Universal Links (https://). Returns true if the activity was handled.
+  private func handleUserActivity(_ userActivity: NSUserActivity) -> Bool {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else {
+      return false
     }
-
-    return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    sharedUrl = url.absoluteString
+    notifyFlutterOfUrl(url.absoluteString)
+    return true
   }
 
   // MARK: - Share Extension Helpers
@@ -152,12 +166,46 @@ import CloudKit
 
   /// Notify Flutter about a received URL
   private func notifyFlutterOfUrl(_ urlString: String) {
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let channel = FlutterMethodChannel(
-        name: SHARED_URL_CHANNEL,
-        binaryMessenger: controller.binaryMessenger
-      )
-      channel.invokeMethod("urlReceived", arguments: urlString)
+    sharedUrlChannel?.invokeMethod("urlReceived", arguments: urlString)
+  }
+}
+
+/// Receives URL and user-activity scene events (cold launch and while running)
+/// and forwards them to the app delegate.
+private final class IncomingUrlSceneHandler: NSObject, FlutterSceneLifeCycleDelegate {
+  private let onUrl: (URL) -> Bool
+  private let onUserActivity: (NSUserActivity) -> Bool
+
+  init(onUrl: @escaping (URL) -> Bool, onUserActivity: @escaping (NSUserActivity) -> Bool) {
+    self.onUrl = onUrl
+    self.onUserActivity = onUserActivity
+  }
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions?
+  ) -> Bool {
+    guard let options = connectionOptions else { return false }
+    for context in options.urlContexts {
+      _ = onUrl(context.url)
     }
+    for activity in options.userActivities {
+      _ = onUserActivity(activity)
+    }
+    // Don't claim the connection so other plugins still see the launch options.
+    return false
+  }
+
+  func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) -> Bool {
+    var handled = false
+    for context in URLContexts where onUrl(context.url) {
+      handled = true
+    }
+    return handled
+  }
+
+  func scene(_ scene: UIScene, continue userActivity: NSUserActivity) -> Bool {
+    return onUserActivity(userActivity)
   }
 }

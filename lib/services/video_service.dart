@@ -4,8 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:video_player/video_player.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/recipe.dart';
@@ -770,15 +771,35 @@ class VideoService {
         await thumbnailsDir.create(recursive: true);
       }
 
-      final thumbnail = await VideoThumbnail.thumbnailFile(
-        video: videoPath,
-        thumbnailPath: thumbnailsDir.path,
-        imageFormat: ImageFormat.JPEG,
-        maxWidth: 640,
-        quality: 85,
+      final thumbnailPath = path.join(
+        thumbnailsDir.path,
+        '${path.basenameWithoutExtension(videoPath)}.jpg',
       );
 
-      return thumbnail;
+      // Grab the first frame as a JPEG, at most 640px wide (aspect kept).
+      final session = await FFmpegKit.executeWithArguments([
+        '-y',
+        '-ss',
+        '0',
+        '-i',
+        videoPath,
+        '-frames:v',
+        '1',
+        '-vf',
+        "scale='min(640,iw)':-2",
+        '-q:v',
+        '3',
+        thumbnailPath,
+      ]);
+      final returnCode = await session.getReturnCode();
+
+      if (!ReturnCode.isSuccess(returnCode) ||
+          !await File(thumbnailPath).exists()) {
+        debugPrint('Warning: FFmpeg could not generate a thumbnail');
+        return null;
+      }
+
+      return thumbnailPath;
     } catch (e) {
       // Thumbnail generation is non-critical, so we just log and continue
       debugPrint('Warning: Failed to generate thumbnail: $e');
