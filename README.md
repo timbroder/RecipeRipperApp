@@ -167,76 +167,46 @@ genhtml coverage/lcov.info -o coverage/html
 open coverage/html/index.html
 ```
 
-### Recipe Extraction Test Harness
+### Pipeline Harness
 
-A Mac-based harness for testing the LLM recipe extraction pipeline (prompt building, response parsing, and post-processing) without needing an iOS device or Apple Foundation Models.
+Runs the app's real URL → recipe pipeline on a URL, with no UI, so you can iterate on extraction without tapping through the app. It runs on an iOS simulator or a plugged-in iPhone, so every stage is the code the app ships:
+
+1. Download the video and read its title and description (`VideoService.prepareFromUrl`)
+2. Description fast path: Foundation Models on the description alone
+3. FFmpeg audio extraction → Speech transcription, and frame extraction → Vision OCR
+4. Foundation Models extraction from description + transcript + OCR, then post-processing
 
 ```bash
-# Run all tests including YouTube fetch (requires network):
-flutter test test/harness/recipe_extraction_harness_test.dart
+# First booted iOS simulator:
+tool/harness.sh https://www.youtube.com/shorts/-xQJKP3mne8
 
-# Run only offline/canned tests:
-flutter test --exclude-tags network test/harness/recipe_extraction_harness_test.dart
+# A specific simulator or a plugged-in iPhone (ids from `flutter devices`):
+tool/harness.sh <url> <device-id>
+
+# Re-print a saved run (the latest if no path is given):
+dart run tool/harness_report.dart harness_runs/<video-id>/<timestamp>.json
 ```
 
-**What it tests:**
-- Prompt construction (system instructions + user prompt)
-- JSON response parsing (LLM output → structured data)
-- Post-processing (ingredient parsing, cross-reference checking, deduplication)
-- YouTube video data fetching (title, description, captions)
+The report shows each stage in order with timings: the metadata, whether the description fast path fired and what the model returned, the transcript, the OCR text, the exact prompt and raw Foundation Models response, what post-processing added, and the final recipe. Each run is saved as JSON under `harness_runs/<video-id>/` (gitignored).
 
-**What it does NOT test:**
-- Video downloading
-- Audio extraction or speech-to-text transcription
-- OCR / frame extraction
-- Apple Foundation Models inference
+**Comparing with the desktop version:** save a [RecipeRipper](https://github.com/timbroder/RecipeRipper) CLI run (its Markdown output) as `integration_test/references/<video-id>.md`. The report then lists which reference ingredients the app found, missed or added.
 
-These steps require a real device. The harness picks up where transcription leaves off.
+**How it works:** `integration_test/pipeline_harness_test.dart` calls the same functions as the video preview and processing screens, in the same order, and contains no recipe logic of its own. The pipeline records what each stage saw into a `PipelineTrace` (`lib/services/pipeline_trace.dart`), which does nothing in the app because only the harness installs one. `test_driver/integration_test.dart` receives the trace on the Mac, prints it and saves it.
 
-#### Workflow A: YouTube URL (recommended)
+**Simulator limits:**
+- The simulator has no on-device speech model, and the app requires on-device recognition, so transcription fails there with "Failed to initialize recognizer". Run on an iPhone to test the transcript path.
+- Foundation Models works in the simulator, but the first request after install can fail with a `SensitiveContentAnalysisML` error; the next run works.
+- The first run on a device or freshly installed simulator stops at the speech recognition permission prompt until you tap Allow.
 
-1. **Set `youtubeUrl`** in the "YouTube URL Pipeline" test group to any YouTube video URL.
+### Post-processing tests with canned LLM responses
 
-2. **Run the harness** — it fetches the video title, description, and closed captions (auto-generated subtitles) directly from YouTube:
-   ```
-   flutter test test/harness/recipe_extraction_harness_test.dart --name "Step 1"
-   ```
+`test/harness/recipe_extraction_harness_test.dart` runs on the Mac with no device. It feeds fixed LLM responses through the app's prompt building, response parsing and post-processing, which is handy for working on post-processing in isolation:
 
-3. **Paste the printed prompt into any LLM** (Claude, ChatGPT, Gemini, etc.) and copy the JSON response.
+```bash
+flutter test test/harness/recipe_extraction_harness_test.dart
+```
 
-4. **Paste the LLM's JSON into `llmResponse`** and re-run to see the final recipe after all post-processing:
-   ```
-   flutter test test/harness/recipe_extraction_harness_test.dart --name "Step 2"
-   ```
-
-#### Workflow B: Manual transcript
-
-1. **Get a transcript.** Either:
-   - Run the app on an iOS device and copy the transcript from logs
-   - Use any transcription tool on the video's audio
-   - Manually transcribe the video yourself
-
-2. **Add your test data** to the harness file — set the transcript text, video title, and (optionally) a golden reference ingredient list.
-
-3. **Run the harness** — it prints the exact prompt that would be sent to Foundation Models:
-   ```
-   flutter test test/harness/recipe_extraction_harness_test.dart --name "show prompt"
-   ```
-
-4. **Paste that prompt into any LLM** and copy the JSON response.
-
-5. **Paste the LLM's JSON into the harness** (the `llmOutput` variable in the "JSON response parsing" test) and re-run to see the final recipe after all post-processing.
-
-#### Built-in test data
-
-The harness ships with sample data for [Cheesy Cream of Broccoli Pasta](https://youtube.com/shorts/K6wEWWhJf7Q) including:
-- Transcript text
-- Golden reference ingredients ([source](https://gist.github.com/timbroder/1fa88e090ea2830fd3d1c41eeaef8c67))
-- Two simulated LLM responses:
-  - **Good response** — captures all ingredients with quantities
-  - **Poor response** — drops quantities and misses beans (simulates Foundation Models quality)
-
-The "poor response" test verifies that the cross-reference checker recovers missing ingredients from the transcript.
+It ships with sample data for [Cheesy Cream of Broccoli Pasta](https://youtube.com/shorts/K6wEWWhJf7Q): a transcript, [golden ingredients](https://gist.github.com/timbroder/1fa88e090ea2830fd3d1c41eeaef8c67), and two simulated LLM responses (a good one, and a poor one that drops quantities and misses the beans, to check the cross-reference checker recovers them). To try another model, run "show prompt", paste the prompt into any LLM, paste its JSON into `llmOutput` in "JSON response parsing", and re-run.
 
 ## Roadmap
 

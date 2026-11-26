@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import '../pipeline_trace.dart';
 import 'llm_service.dart';
 import 'llm_prompts.dart';
 
@@ -54,6 +55,11 @@ class AppleLlmService extends LlmService {
     required String instructions,
     required String prompt,
   }) async {
+    PipelineTrace.record('llm.request', {
+      'service': name,
+      'instructions': instructions,
+      'prompt': prompt,
+    });
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
@@ -62,6 +68,7 @@ class AppleLlmService extends LlmService {
           'instructions': instructions,
         },
       );
+      PipelineTrace.record('llm.response', {'raw': response});
 
       if (response == null || response.isEmpty) {
         return LlmExtractionResult.failed('Empty response from model');
@@ -69,6 +76,7 @@ class AppleLlmService extends LlmService {
 
       return _parseResponse(response);
     } on PlatformException catch (e) {
+      PipelineTrace.record('llm.error', {'code': e.code, 'message': e.message});
       if (e.code == 'CONTEXT_OVERFLOW') {
         return LlmExtractionResult.failed('context_overflow');
       }

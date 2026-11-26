@@ -11,6 +11,7 @@ import 'llm/llm_service.dart';
 import 'llm/llm_service_factory.dart';
 import 'llm_recipe_extraction_service.dart';
 import 'ocr_service.dart';
+import 'pipeline_trace.dart';
 import 'speech_transcription_service.dart';
 import 'recipe_parsing_service.dart';
 
@@ -85,6 +86,15 @@ class ProcessingService {
       // Step 0: Description-only fast path (YouTube only)
       final llm = _llmService;
       final llmAvailable = llm != null && await llm.isAvailable();
+      PipelineTrace.record('pipeline.start', {
+        'videoPath': videoPath,
+        'sourceUrl': sourceUrl,
+        'videoTitle': videoFileName,
+        'sourcePlatform': sourcePlatform,
+        'description': description,
+        'llmService': llm?.name,
+        'llmAvailable': llmAvailable,
+      });
 
       if (description != null && description.isNotEmpty && llmAvailable) {
         await _updateJob(
@@ -145,6 +155,11 @@ class ProcessingService {
           );
 
           final recipeId = await _databaseService.insertRecipe(recipe);
+          PipelineTrace.record('pipeline.done', {
+            'recipeId': recipeId,
+            'processingMethod': recipe.metadata?.processingMethod,
+            'confidenceScore': confidenceScore.toJson(),
+          });
 
           await _updateJob(
             jobId,
@@ -180,6 +195,7 @@ class ProcessingService {
       );
 
       audioPath = await _audioService.extractAudio(videoPath);
+      PipelineTrace.record('audio', {'path': audioPath});
 
       await _updateJob(
         jobId,
@@ -221,6 +237,11 @@ class ProcessingService {
       );
 
       final transcript = transcriptionResult.text;
+      PipelineTrace.record('transcript', {
+        'text': transcript,
+        'chars': transcript.length,
+        'confidence': transcriptionResult.confidence,
+      });
 
       // Step 3: Extract frames from video
       await _updateJob(
@@ -284,6 +305,11 @@ class ProcessingService {
           );
         },
       );
+      PipelineTrace.record('ocr', {
+        'frameCount': framePaths.length,
+        'text': ocrText,
+        'chars': ocrText.length,
+      });
 
       // Calculate processing time
       final startTime =
@@ -331,6 +357,9 @@ class ProcessingService {
 
       // Step 6: Heuristic fallback
       if (recipe == null) {
+        PipelineTrace.record('heuristic', {
+          'reason': llmAvailable ? 'llm_failed' : 'llm_unavailable',
+        });
         await _updateJob(
           jobId,
           status: ProcessingStatus.parsing,
@@ -395,6 +424,11 @@ class ProcessingService {
 
       // Save recipe to database
       final recipeId = await _databaseService.insertRecipe(recipe);
+      PipelineTrace.record('pipeline.done', {
+        'recipeId': recipeId,
+        'processingMethod': recipe.metadata?.processingMethod,
+        'confidenceScore': confidenceScore.toJson(),
+      });
 
       // Update job as completed
       await _updateJob(
@@ -417,6 +451,7 @@ class ProcessingService {
 
       return jobId;
     } catch (e) {
+      PipelineTrace.record('pipeline.error', {'error': e.toString()});
       // Update job as failed
       await _updateJob(
         jobId,

@@ -27,6 +27,22 @@ class WebRecipeExtracted extends DownloadResult {
   WebRecipeExtracted(this.recipe, this.extractionMethod);
 }
 
+/// What a URL turned into after [VideoService.prepareFromUrl].
+sealed class PreparedSource {}
+
+/// A downloaded video, ready for `ProcessingService.processVideo`.
+class PreparedVideo extends PreparedSource {
+  final VideoMetadata metadata;
+  PreparedVideo(this.metadata);
+}
+
+/// A recipe scraped directly from a web page; there's no video to process.
+class PreparedWebRecipe extends PreparedSource {
+  final Recipe recipe;
+  final String extractionMethod;
+  PreparedWebRecipe(this.recipe, this.extractionMethod);
+}
+
 /// Exception thrown when video operations fail
 class VideoException implements Exception {
   final String message;
@@ -226,6 +242,27 @@ class VideoService {
   ///
   /// Returns [VideoDownloaded] for video files, or [WebRecipeExtracted]
   /// if a recipe was found directly on an HTML page.
+  /// Download [url] and, if it's a video, extract its metadata (title,
+  /// description, duration, thumbnail).
+  ///
+  /// This is everything the app does with a shared URL before processing.
+  /// The video preview screen and the pipeline harness both call it.
+  Future<PreparedSource> prepareFromUrl(
+    String url, {
+    ProgressCallback? onProgress,
+  }) async {
+    final result = await downloadVideo(url, onProgress: onProgress);
+    switch (result) {
+      case VideoDownloaded(:final filePath):
+        onProgress?.call(1.0, 'Extracting video information...');
+        return PreparedVideo(
+          await extractMetadata(filePath, sourceUrl: url),
+        );
+      case WebRecipeExtracted(:final recipe, :final extractionMethod):
+        return PreparedWebRecipe(recipe, extractionMethod);
+    }
+  }
+
   Future<DownloadResult> downloadVideo(
     String url, {
     ProgressCallback? onProgress,

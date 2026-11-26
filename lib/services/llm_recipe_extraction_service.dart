@@ -7,6 +7,7 @@ import '../utils/cross_reference_checker.dart';
 import '../utils/parsing_utils.dart';
 import '../utils/ingredient_classifier.dart';
 import 'llm/llm_service.dart';
+import 'pipeline_trace.dart';
 
 /// Orchestrates LLM-based recipe extraction with the fallback chain.
 ///
@@ -35,6 +36,7 @@ class LlmRecipeExtractionService {
   }) async {
     // Filter noise from description
     final filtered = NoiseFilter.filterText(description);
+    PipelineTrace.record('description.filtered', {'text': filtered});
     if (filtered.trim().isEmpty) return null;
 
     // Truncate if needed (descriptions are usually short, but just in case)
@@ -46,7 +48,12 @@ class LlmRecipeExtractionService {
       videoTitle: videoTitle,
     );
 
-    if (!result.success || !result.meetsMinimumQuality) return null;
+    final accepted = result.success && result.meetsMinimumQuality;
+    PipelineTrace.record('description.result', {
+      ..._traceResult(result),
+      'accepted': accepted,
+    });
+    if (!accepted) return null;
 
     return _buildRecipe(
       result: result,
@@ -79,6 +86,10 @@ class LlmRecipeExtractionService {
       description: description,
     );
 
+    PipelineTrace.record('llm.input', {
+      'text': combinedText,
+      'chars': combinedText?.length ?? 0,
+    });
     if (combinedText == null) return null;
 
     // Call LLM
@@ -95,6 +106,10 @@ class LlmRecipeExtractionService {
         description: description,
         maxChars: _maxInputChars ~/ 2,
       );
+      PipelineTrace.record('llm.retry', {
+        'reason': 'context_overflow',
+        'chars': shorter?.length ?? 0,
+      });
       if (shorter != null) {
         result = await llmService.extractRecipe(
           shorter,
@@ -103,6 +118,7 @@ class LlmRecipeExtractionService {
       }
     }
 
+    PipelineTrace.record('llm.result', _traceResult(result));
     if (!result.success) return null;
 
     return _buildRecipe(
@@ -250,6 +266,16 @@ class LlmRecipeExtractionService {
       sourceText: sourceText,
     );
 
+    PipelineTrace.record('postprocess', {
+      'processingMethod': processingMethod,
+      'parsedIngredients': ingredients.map(_describeIngredient).toList(),
+      'rawDirections': rawDirections,
+      'imperativeDirections': imperativeDirections,
+      'autoAddedIngredients':
+          crossRef.autoAddedIngredients.map(_describeIngredient).toList(),
+      'warnings': crossRef.warnings,
+    });
+
     // Merge auto-added ingredients
     if (crossRef.autoAddedIngredients.isNotEmpty) {
       ingredients = [...ingredients, ...crossRef.autoAddedIngredients];
@@ -272,6 +298,27 @@ class LlmRecipeExtractionService {
       metadata: metadata,
     );
   }
+
+  /// Summarize an LLM result for the pipeline trace.
+  static Map<String, Object?> _traceResult(LlmExtractionResult result) => {
+        'success': result.success,
+        'error': result.error,
+        'title': result.title,
+        'ingredients': result.ingredients
+            .map((i) => [i.quantity, i.unit, i.item, i.notes]
+                .where((p) => p != null && p.isNotEmpty)
+                .join(' '))
+            .toList(),
+        'directions': result.directions,
+        'meetsMinimumQuality': result.meetsMinimumQuality,
+      };
+
+  static String _describeIngredient(Ingredient i) => [
+        i.quantity?.toString(),
+        i.unit,
+        i.item,
+        if (i.notes != null) '(${i.notes})',
+      ].where((p) => p != null && p.isNotEmpty).join(' ');
 
   /// Check if an LlmIngredient is a flat string (no quantity/unit/notes parsed).
   static bool _isFlatStringIngredient(LlmIngredient ingredient) {

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import '../pipeline_trace.dart';
 import 'llm_service.dart';
 import 'llm_prompts.dart';
 
@@ -68,11 +69,13 @@ class AndroidLlmService extends LlmService {
   }
 
   Future<LlmExtractionResult> _generate(String prompt) async {
+    PipelineTrace.record('llm.request', {'service': name, 'prompt': prompt});
     try {
       final response = await _channel.invokeMethod<String>(
         'generateText',
         {'prompt': prompt},
       );
+      PipelineTrace.record('llm.response', {'raw': response});
 
       if (response == null || response.isEmpty) {
         return LlmExtractionResult.failed('Empty response from model');
@@ -80,6 +83,7 @@ class AndroidLlmService extends LlmService {
 
       return _parseResponse(response);
     } on PlatformException catch (e) {
+      PipelineTrace.record('llm.error', {'code': e.code, 'message': e.message});
       return LlmExtractionResult.failed('Platform error: ${e.message}');
     }
   }
